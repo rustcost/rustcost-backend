@@ -15,6 +15,8 @@ pub fn app_router(state: AppState) -> Router {
     Router::new()
         // Define the root route
         .route("/", get(root))
+        // Add health check route
+        .route("/health", get(health_check))
         // Nest post-related routes under "/v1/posts"
         .nest("/v1/posts", posts_routes(state.clone()))
         // Define a fallback handler for 404 errors
@@ -26,6 +28,11 @@ pub fn app_router(state: AppState) -> Router {
 // Handler for the root route
 async fn root() -> &'static str {
     "Server is running!"
+}
+
+// Handler for the health check
+async fn health_check() -> &'static str {
+    "OK"
 }
 
 // Handler for 404 Not Found errors
