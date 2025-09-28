@@ -16,7 +16,7 @@ mod state;
 mod utils;
 
 // Import necessary items from modules
-use crate::config::config;
+use crate::config::config; // returns &'static Config
 use crate::errors::{internal_error, AppError};
 use crate::routes::app_router;
 use crate::state::AppState;
@@ -37,7 +37,7 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
 
     // Load application configuration
-    let app_config = config().await;
+    let app_config = config().await; // &'static Config
 
     // Create a connection manager for the database pool
     let manager = Manager::new(app_config.db_url().to_string(), Runtime::Tokio1);
@@ -94,7 +94,7 @@ async fn run_migrations(pool: &Pool) -> Result<(), AppError> {
 }
 
 /// Run the Axum server
-async fn run_server(app_config: crate::config::AppConfig, pool: Pool) {
+async fn run_server(app_config: &crate::config::Config, pool: Pool) {
     // Create application state containing the connection pool
     let state = AppState { pool };
 
