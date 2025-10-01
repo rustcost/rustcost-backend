@@ -1,57 +1,45 @@
 use axum::{
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::get,
     Router,
 };
 
-// Import handlers for post-related operations
-use crate::handlers::posts::{create_post, get_post, list_posts};
-// Import the application state
+use crate::handlers::nodes::node_handler;
+use crate::handlers::pods::pod_handler;
 use crate::AppState;
 
-// Function to create the main application router
+/// Build the main application router
 pub fn app_router(state: AppState) -> Router {
     Router::new()
-        // Define the root route
+        // Root route
         .route("/", get(root))
-        // Add health check route
+        // Health check
         .route("/health", get(health_check))
-        // Nest post-related routes under "/v1/posts"
-        .nest("/v1/posts", posts_routes(state.clone()))
-        // Define a fallback handler for 404 errors
+        // Mount node-related routes under /api/v1
+        .nest("/api/v1/nodes", node_handler::node_routes(state.clone()))
+        .nest("/api/v1/pods", pod_handler::pod_routes(state.clone()))
+
+        // Fallback handler for 404
         .fallback(handler_404)
-        // Attach the application state to the router
+        // Attach shared application state ONCE here
         .with_state(state)
 }
 
-// Handler for the root route
+// Handler for root
 async fn root() -> &'static str {
     "Server is running!"
 }
 
-// Handler for the health check
+// Handler for health check
 async fn health_check() -> &'static str {
     "OK"
 }
 
-// Handler for 404 Not Found errors
+// Handler for 404 Not Found
 async fn handler_404() -> impl IntoResponse {
     (
         StatusCode::NOT_FOUND,
         "The requested resource was not found",
     )
-}
-
-// Function to define post-related routes
-fn posts_routes(state: AppState) -> Router<AppState> {
-    Router::new()
-        // Route for creating a new post (POST /v1/posts)
-        .route("/", post(create_post))
-        // Route for listing all posts (GET /v1/posts)
-        .route("/", get(list_posts))
-        // Route for getting a specific post by ID (GET /v1/posts/:id)
-        .route("/{id}", get(get_post))
-        // Attach the application state to the posts router
-        .with_state(state)
 }

@@ -20,7 +20,7 @@ use crate::config::config; // returns &'static Config
 use crate::errors::{internal_error, AppError};
 use crate::routes::app_router;
 use crate::state::AppState;
-use crate::utils::schedulers::node_scheduler::start_node_collector;
+use crate::utils::schedulers::node_scheduler::start_collector;
 
 // Embed database migrations
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/");
@@ -113,7 +113,7 @@ async fn run_server(app_config: &crate::config::Config, pool: Pool) {
 
     // Spawn background task
     tokio::spawn(async {
-        if let Err(e) = start_node_collector().await {
+        if let Err(e) = start_collector().await {
             tracing::error!("Node collector task failed: {:?}", e);
         }
     });

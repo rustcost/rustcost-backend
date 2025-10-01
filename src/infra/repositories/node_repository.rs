@@ -1,61 +1,80 @@
 use diesel::prelude::*;
-use crate::domain::models::node::{NodeModel, NodeEntity, NewNodeEntity};
-use crate::infra::db::schema::nodes;
-use crate::infra::errors::{adapt_infra_error, InfraError};
+use chrono::{NaiveDateTime, Utc};
+use anyhow::Result;
 
-pub fn insert(conn: &mut PgConnection, new_node: &NewNodeEntity) -> Result<NodeModel, InfraError> {
-    let entity: NodeEntity = diesel::insert_into(nodes::table)
-        .values(new_node)
-        .get_result(conn)
-        .map_err(adapt_infra_error)?;
+use crate::infra::db::connection::establish_connection;
+use crate::infra::db::schema::{nodes, node_metrics};
+use crate::infra::db::schema::nodes::dsl::*;
+use crate::infra::db::schema::node_metrics::dsl::*;
 
-    Ok(adapt_entity_to_model(entity))
+use crate::domain::models::node::{Node, NewNode, NodeMetric, NewNodeMetric};
+use diesel::sql_types::Double;
+use diesel::dsl::sql;
+
+/// Insert new node
+pub fn insert_node(new_node: NewNode) -> Result<Node> {
+    let mut conn = establish_connection();
+
+    diesel::insert_into(nodes::table)
+        .values(&new_node)
+        .returning(Node::as_returning())
+        .get_result(&mut conn)
+        .map_err(Into::into)
 }
 
-pub fn get(conn: &mut PgConnection, id: i32) -> Result<NodeModel, InfraError> {
-    let entity = nodes::table
-        .filter(nodes::id.eq(id))
-        .select(NodeEntity::as_select())
-        .first::<NodeEntity>(conn)
-        .map_err(adapt_infra_error)?;
+/// Insert a new node metric
+pub fn insert_node_metric(new_metric: NewNodeMetric) -> Result<NodeMetric> {
+    let mut conn = establish_connection();
 
-    Ok(adapt_entity_to_model(entity))
+    diesel::insert_into(node_metrics::table)
+        .values(&new_metric)
+        .returning(NodeMetric::as_returning())
+        .get_result(&mut conn)
+        .map_err(Into::into)
 }
 
-#[derive(Debug)]
-pub struct  NodesFilter {
-    pub name_contains: Option<String>,
-    pub architecture: Option<String>,
+/// Get all nodes
+pub fn get_nodes() -> Result<Vec<Node>> {
+    let mut conn = establish_connection();
+    nodes.load::<Node>(&mut conn).map_err(Into::into)
 }
 
-pub fn get_all(conn: &mut PgConnection, filter: NodesFilter) -> Result<Vec<NodeModel>, InfraError> {
-    let mut query = nodes::table.into_boxed::<diesel::pg::Pg>();
+/// Get average CPU usage today (all nodes)
+pub fn get_avg_cpu_today() -> Result<Option<f64>> {
+    let mut conn = establish_connection();
+    let today = Utc::now().date_naive();
 
-    if let Some(name) = filter.name_contains {
-        query = query.filter(nodes::name.ilike(format!("%{}%", name)));
-    }
-
-    if let Some(arch) = filter.architecture {
-        query = query.filter(nodes::architecture.eq(arch));
-    }
-
-    let results = query
-        .select(NodeEntity::as_select())
-        .load::<NodeEntity>(conn)
-        .map_err(adapt_infra_error)?;
-
-    Ok(results.into_iter().map(adapt_entity_to_model).collect())
+    node_metrics
+        .filter(timestamp.ge(today.and_hms_opt(0, 0, 0).unwrap()))
+        .select(sql::<Double>("CAST(AVG(cpu_mcores) AS DOUBLE PRECISION)"))
+        .first::<f64>(&mut conn)       // ask for f64
+        .optional()                    // wrap it into Option<f64>
+        .map_err(Into::into)
 }
 
-fn adapt_entity_to_model(entity: NodeEntity) -> NodeModel {
-    NodeModel {
-        id: entity.id,
-        name: entity.name,
-        cpu_capacity: entity.cpu_capacity,
-        memory_capacity: entity.memory_capacity,
-        kubelet_version: entity.kubelet_version,
-        os_image: entity.os_image,
-        architecture: entity.architecture,
-        created_at: entity.created_at,
-    }
+
+
+/// Get average Memory usage today (all nodes)
+pub fn get_avg_memory_today() -> Result<Option<f64>> {
+    let mut conn = establish_connection();
+    let today = Utc::now().date_naive();
+
+    node_metrics
+        .filter(timestamp.ge(today.and_hms_opt(0, 0, 0).unwrap()))
+        .select(sql::<Double>("CAST(AVG(memory_bytes) AS DOUBLE PRECISION)"))
+        .first::<f64>(&mut conn)
+        .optional()
+        .map_err(Into::into)
+}
+
+/// Get CPU + Memory data between given times (for chart)
+pub fn get_metrics_between(start: NaiveDateTime, end: NaiveDateTime) -> Result<Vec<NodeMetric>> {
+    let mut conn = establish_connection();
+
+    node_metrics
+        .filter(timestamp.ge(start))
+        .filter(timestamp.le(end))
+        .order(timestamp.asc())
+        .load::<NodeMetric>(&mut conn)
+        .map_err(Into::into)
 }

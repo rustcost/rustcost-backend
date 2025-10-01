@@ -1,2 +1,2 @@
-pub mod post_repository;
+pub mod pod_repository;
 pub mod node_repository;
