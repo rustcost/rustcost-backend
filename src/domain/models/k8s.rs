@@ -61,7 +61,10 @@ pub struct K8sNode {
     pub metadata: Metadata,
     pub status: Option<NodeStatus>,
 }
-
+#[derive(Debug, Deserialize)]
+pub struct K8sPodList {
+    pub items: Vec<K8sPod>,
+}
 #[derive(Debug, Deserialize)]
 pub struct K8sPod {
     pub metadata: Metadata,

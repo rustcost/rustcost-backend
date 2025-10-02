@@ -1,18 +1,17 @@
+use std::env;
 use std::fs;
 use std::time::Duration;
-use std::env;
 
 use chrono::Utc;
-use reqwest::{Client, Certificate};
-use tokio::time::{interval};
+use reqwest::{Certificate, Client};
+use tokio::time::interval;
 use tracing::{debug, error, info, warn};
 
+use crate::domain::models::k8s::{
+    K8sNode, K8sPod, K8sPodList, NodeList, NodeMetricsList, PodMetricsItem, PodMetricsList,
+};
 use crate::domain::models::node::{NewNode, NewNodeMetric};
 use crate::domain::models::pod::{NewPod, NewPodMetric};
-use crate::domain::models::k8s::{
-    NodeMetricsList, PodMetricsList, K8sNode, NodeList, PodMetricsItem,
-};
-
 use crate::infra::repositories::node_repository::{insert_node, insert_node_metric};
 use crate::infra::repositories::pod_repository::{insert_pod, insert_pod_metric};
 
@@ -50,13 +49,19 @@ pub async fn get_node_metrics(client: &Client, token: &str) -> anyhow::Result<No
     Ok(resp.error_for_status()?.json::<NodeMetricsList>().await?)
 }
 
+pub async fn get_pods(client: &Client, token: &str) -> anyhow::Result<K8sPodList> {
+    let url = format!("{}/api/v1/pods", get_api_server());
+    let resp = client.get(&url).bearer_auth(token).send().await?;
+    Ok(resp.error_for_status()?.json::<K8sPodList>().await?)
+}
+
 pub async fn get_pod_metrics(client: &Client, token: &str) -> anyhow::Result<PodMetricsList> {
     let url = format!("{}/apis/metrics.k8s.io/v1beta1/pods", get_api_server());
     let resp = client.get(&url).bearer_auth(token).send().await?;
 
     let status = resp.status();
-
     if !status.is_success() {
+        // consume body before resp is moved
         let body = resp.text().await.unwrap_or_default();
         return Err(anyhow::anyhow!(
             "Pod metrics fetch failed: {} - {}",
@@ -65,10 +70,9 @@ pub async fn get_pod_metrics(client: &Client, token: &str) -> anyhow::Result<Pod
         ));
     }
 
+    // success path: parse JSON (resp is still owned here)
     Ok(resp.json::<PodMetricsList>().await?)
 }
-
-
 
 /// --- Mapping functions ---
 fn node_to_new_node(node: &K8sNode) -> NewNode {
@@ -82,12 +86,37 @@ fn node_to_new_node(node: &K8sNode) -> NewNode {
     }
 }
 
-fn pod_to_new_pod(item: &PodMetricsItem) -> NewPod {
+fn core_pod_to_new_pod(pod: &K8sPod) -> NewPod {
+    NewPod {
+        name: pod.metadata.name.clone(),
+        namespace: pod
+            .metadata
+            .namespace
+            .clone()
+            .unwrap_or_else(|| "default".to_string()),
+        node_id: None,
+        labels: pod
+            .metadata
+            .labels
+            .clone()
+            .map(|m| serde_json::to_value(m).unwrap_or_default()),
+    }
+}
+
+fn metrics_pod_to_new_pod(item: &PodMetricsItem) -> NewPod {
     NewPod {
         name: item.metadata.name.clone(),
-        namespace: item.metadata.namespace.clone().unwrap_or_else(|| "default".to_string()),
+        namespace: item
+            .metadata
+            .namespace
+            .clone()
+            .unwrap_or_else(|| "default".to_string()),
         node_id: None,
-        labels: item.metadata.labels.clone().map(|m| serde_json::to_value(m).unwrap_or_default()),
+        labels: item
+            .metadata
+            .labels
+            .clone()
+            .map(|m| serde_json::to_value(m).unwrap_or_default()),
     }
 }
 
@@ -115,16 +144,16 @@ pub async fn start_collector() -> anyhow::Result<()> {
     info!("Starting K8s collector…");
     let token = read_token()?;
     let client = build_client()?;
-    let mut ticker = interval(Duration::from_secs(60)); // 60s (prod: 300s)
+    let mut ticker = interval(Duration::from_secs(60)); // prod: 300
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
         ticker.tick().await;
 
-        // Fetch all in parallel
-        let (nodes_res, node_metrics_res, pod_metrics_res) = tokio::join!(
+        let (nodes_res, node_metrics_res, pods_res, pod_metrics_res) = tokio::join!(
             get_nodes(&client, &token),
             get_node_metrics(&client, &token),
+            get_pods(&client, &token),
             get_pod_metrics(&client, &token),
         );
 
@@ -138,7 +167,6 @@ pub async fn start_collector() -> anyhow::Result<()> {
                         Ok(inserted_node) => {
                             debug!("✅ Node upserted: {}", inserted_node.name);
 
-                            // node metrics
                             if let Ok(metrics) = &node_metrics_res {
                                 for item in &metrics.items {
                                     let cpu_mcores = parse_cpu(&item.usage.cpu);
@@ -158,39 +186,62 @@ pub async fn start_collector() -> anyhow::Result<()> {
             Err(e) => error!("❌ Error fetching nodes: {:?}", e),
         }
 
-        // --- Pods ---
+        // --- Pods (core API -> metadata) ---
+        match pods_res {
+            Ok(pod_list) => {
+                info!("Processing {} pods from core API", pod_list.items.len());
+                for pod in pod_list.items {
+                    let new_pod = core_pod_to_new_pod(&pod);
+                    if let Err(e) = insert_pod(new_pod) {
+                        error!("❌ Failed to upsert pod: {:?}", e);
+                    }
+                }
+            }
+            Err(e) => error!("❌ Error fetching pods: {:?}", e),
+        }
+
+        // --- Pod metrics (metrics-server) ---
         match pod_metrics_res {
             Ok(metrics) => {
                 if metrics.items.is_empty() {
                     warn!("⚠️ No pod metrics returned by metrics-server");
                 } else {
-                    info!("Processing {} pods", metrics.items.len());
+                    info!("Processing {} pod metrics entries", metrics.items.len());
                 }
 
                 for item in metrics.items {
-                    let ns = item.metadata.namespace.clone().unwrap_or_else(|| "default".to_string());
+                    let ns = item
+                        .metadata
+                        .namespace
+                        .clone()
+                        .unwrap_or_else(|| "default".to_string());
 
-                    let new_pod = pod_to_new_pod(&item);
-                    match insert_pod(new_pod) {
-                        Ok(inserted_pod) => {
-                            debug!("✅ Pod upserted: {} in ns {}", inserted_pod.name, inserted_pod.namespace);
+                    // Make sure pod exists (upsert from metrics record as well — harmless if already inserted)
+                    let upsert_from_metrics = metrics_pod_to_new_pod(&item);
+                    if let Err(e) = insert_pod(upsert_from_metrics) {
+                        error!(
+                            "❌ Failed to upsert pod from metrics record ({}): {:?}",
+                            item.metadata.name, e
+                        );
+                    }
 
-                            let mut cpu_mcores: i64 = 0;
-                            let mut mem_bytes: i64 = 0;
+                    // Sum across containers for this pod
+                    let mut cpu_mcores: i64 = 0;
+                    let mut mem_bytes: i64 = 0;
+                    for c in &item.containers {
+                        cpu_mcores += parse_cpu(&c.usage.cpu);
+                        mem_bytes += parse_memory(&c.usage.memory);
+                    }
 
-                            for c in &item.containers {
-                                cpu_mcores += parse_cpu(&c.usage.cpu);
-                                mem_bytes += parse_memory(&c.usage.memory);
-                            }
-
-                            let new_metric =
-                                pod_metric_to_new(&ns, cpu_mcores, mem_bytes, Some(inserted_pod.pod_id));
-
-                            if let Err(e) = insert_pod_metric(new_metric) {
-                                error!("❌ Failed to insert pod metric: {:?}", e);
-                            }
-                        }
-                        Err(e) => error!("❌ Failed to upsert pod: {:?}", e),
+                    // Insert timeseries metric
+                    let new_metric = pod_metric_to_new(&ns, cpu_mcores, mem_bytes, None);
+                    if let Err(e) = insert_pod_metric(new_metric) {
+                        error!("❌ Failed to insert pod metric for {}: {:?}", item.metadata.name, e);
+                    } else {
+                        debug!(
+                            "📦 Pod metric stored: {} ns={} cpu={}m mem={}B",
+                            item.metadata.name, ns, cpu_mcores, mem_bytes
+                        );
                     }
                 }
             }
@@ -217,7 +268,13 @@ fn parse_memory(mem_str: &str) -> i64 {
     } else if mem_str.ends_with("Mi") {
         mem_str.trim_end_matches("Mi").parse::<i64>().unwrap_or(0) * 1024 * 1024
     } else if mem_str.ends_with("Gi") {
-        mem_str.trim_end_matches("Gi").parse::<i64>().unwrap_or(0) * 1024 * 1024 * 1024
+        mem_str
+            .trim_end_matches("Gi")
+            .parse::<i64>()
+            .unwrap_or(0)
+            * 1024
+            * 1024
+            * 1024
     } else {
         mem_str.parse::<i64>().unwrap_or(0)
     }
