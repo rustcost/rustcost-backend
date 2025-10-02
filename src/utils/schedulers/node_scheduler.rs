@@ -112,7 +112,7 @@ pub async fn start_collector() -> anyhow::Result<()> {
     info!("Starting K8s collector…");
     let token = read_token()?;
     let client = build_client()?;
-    let mut ticker = interval(Duration::from_secs(300)); // every 5 min
+    let mut ticker = interval(Duration::from_secs(60)); // dev: every 1 min (change back to 300s in prod)
 
     loop {
         ticker.tick().await;
@@ -122,46 +122,57 @@ pub async fn start_collector() -> anyhow::Result<()> {
             Ok(node_list) => {
                 for node in node_list.items {
                     let new_node = node_to_new_node(&node);
-                    if let Ok(inserted) = insert_node(new_node) {
-                        info!("Inserted/updated node {:?}", inserted.name);
+                    match insert_node(new_node) {
+                        Ok(inserted_node) => {
+                            info!("Inserted/updated node {:?}", inserted_node.name);
+
+                            // --- Node Metrics ---
+                            if let Ok(metrics) = get_node_metrics(&client, &token).await {
+                                for item in metrics.items {
+                                    let cpu_mcores = parse_cpu(&item.usage.cpu);
+                                    let mem_bytes = parse_memory(&item.usage.memory);
+                                    let new_metric =
+                                        node_metric_to_new(cpu_mcores, mem_bytes, Some(inserted_node.node_id));
+
+                                    match insert_node_metric(new_metric) {
+                                        Ok(m) => debug!("Inserted node metric id={}", m.id),
+                                        Err(e) => error!("❌ Failed to insert node metric: {:?}", e),
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => error!("❌ Failed to insert node: {:?}", e),
                     }
                 }
             }
-            Err(e) => error!("Error fetching nodes: {:?}", e),
+            Err(e) => error!("❌ Error fetching nodes: {:?}", e),
         }
 
-        // --- Node Metrics ---
-        if let Ok(metrics) = get_node_metrics(&client, &token).await {
-            for item in metrics.items {
-                let cpu_mcores = parse_cpu(&item.usage.cpu);
-                let mem_bytes = parse_memory(&item.usage.memory);
-                let new_metric = node_metric_to_new(cpu_mcores, mem_bytes, None);
-                let _ = insert_node_metric(new_metric);
-            }
-        }
-
-        // --- Pod Metrics ---
+        // --- Pods ---
         if let Ok(metrics) = get_pod_metrics(&client, &token).await {
             for item in metrics.items {
-                let pod_name = item.metadata.name.clone();
-                let ns = item
-                    .metadata
-                    .namespace
-                    .clone()
-                    .unwrap_or_else(|| "default".to_string());
-
+                let ns = item.metadata.namespace.clone().unwrap_or_else(|| "default".to_string());
                 let cpu_mcores = parse_cpu(&item.usage.cpu);
                 let mem_bytes = parse_memory(&item.usage.memory);
-                let new_pod = pod_to_new_pod(&item);
-                let _ = insert_pod(new_pod);
 
-                let new_metric = pod_metric_to_new(&ns, cpu_mcores, mem_bytes, None);
-                let _ = insert_pod_metric(new_metric);
+                let new_pod = pod_to_new_pod(&item);
+                match insert_pod(new_pod) {
+                    Ok(inserted_pod) => {
+                        info!("Inserted/updated pod {} in ns {}", inserted_pod.name, inserted_pod.namespace);
+
+                        let new_metric =
+                            pod_metric_to_new(&ns, cpu_mcores, mem_bytes, Some(inserted_pod.pod_id));
+                        match insert_pod_metric(new_metric) {
+                            Ok(m) => debug!("Inserted pod metric id={}", m.id),
+                            Err(e) => error!("❌ Failed to insert pod metric: {:?}", e),
+                        }
+                    }
+                    Err(e) => error!("❌ Failed to insert pod: {:?}", e),
+                }
             }
         }
     }
 }
-
 
 /// --- CPU/Memory Parsers ---
 fn parse_cpu(cpu_str: &str) -> i64 {
