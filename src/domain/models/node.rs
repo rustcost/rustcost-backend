@@ -22,6 +22,12 @@ pub struct NewNode {
     pub labels: Option<serde_json::Value>,
 }
 
+#[derive(AsChangeset)]
+#[diesel(table_name = nodes)]
+pub struct UpdateNode {
+    pub labels: Option<serde_json::Value>,
+}
+
 /// =======================
 /// Node Metrics
 /// =======================

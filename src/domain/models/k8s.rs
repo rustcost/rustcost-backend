@@ -35,9 +35,15 @@ pub struct NodeMetricsList {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ContainerUsage {
+    pub name: String,
+    pub usage: Usage,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PodMetricsItem {
     pub metadata: Metadata,
-    pub usage: Usage,
+    pub containers: Vec<ContainerUsage>,  // ✅ instead of `usage`
 }
 
 #[derive(Debug, Deserialize)]
@@ -79,14 +85,23 @@ fn node_metrics_to_new(item: &NodeMetricsItem, node_id: Option<i32>) -> NewNodeM
 }
 
 fn pod_metrics_to_new(item: &PodMetricsItem, pod_id: Option<i32>) -> NewPodMetric {
+    let mut total_cpu = 0;
+    let mut total_mem = 0;
+
+    for c in &item.containers {
+        total_cpu += parse_cpu(&c.usage.cpu);
+        total_mem += parse_memory(&c.usage.memory);
+    }
+
     NewPodMetric {
         pod_id,
-        namespace: item.metadata.namespace.clone().unwrap_or("default".to_string()),
-        cpu_mcores: parse_cpu(&item.usage.cpu),
-        memory_bytes: parse_memory(&item.usage.memory),
+        namespace: item.metadata.namespace.clone().unwrap_or_else(|| "default".to_string()),
+        cpu_mcores: total_cpu,
+        memory_bytes: total_mem,
         timestamp: Utc::now().naive_utc(),
     }
 }
+
 
 /// --- CPU/Memory Parsers (simplified) ---
 fn parse_cpu(cpu_str: &str) -> i64 {

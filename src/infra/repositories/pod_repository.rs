@@ -6,9 +6,7 @@ use diesel::dsl::sql;
 
 use crate::infra::db::connection::establish_connection;
 use crate::infra::db::schema::{pods, pod_metrics};
-use crate::domain::models::pod::{
-    Pod, NewPod, PodMetric, NewPodMetric,
-};
+use crate::domain::models::pod::{Pod, NewPod, PodMetric, NewPodMetric, UpdatePod};
 use crate::infra::db::schema::pod_metrics::dsl::*;
 
 /// =======================
@@ -16,12 +14,20 @@ use crate::infra::db::schema::pod_metrics::dsl::*;
 /// =======================
 pub fn insert_pod(new_pod: NewPod) -> Result<Pod> {
     let mut conn = establish_connection();
+
     diesel::insert_into(pods::table)
         .values(&new_pod)
+        .on_conflict((pods::name, pods::namespace)) // ✅ composite key
+        .do_update()
+        .set(UpdatePod {
+            node_id: new_pod.node_id,
+            labels: new_pod.labels.clone(),
+        })
         .returning(Pod::as_returning())
         .get_result(&mut conn)
         .map_err(Into::into)
 }
+
 
 pub fn insert_pod_metric(new_metric: NewPodMetric) -> Result<PodMetric> {
     let mut conn = establish_connection();

@@ -27,6 +27,13 @@ pub struct NewPod {
     pub labels: Option<serde_json::Value>,
 }
 
+#[derive(AsChangeset)]
+#[diesel(table_name = pods)]
+pub struct UpdatePod {
+    pub node_id: Option<i32>,
+    pub labels: Option<serde_json::Value>,
+}
+
 /// =======================
 /// Pod Metrics
 /// =======================

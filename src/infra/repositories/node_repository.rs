@@ -12,15 +12,22 @@ use diesel::sql_types::Double;
 use diesel::dsl::sql;
 
 /// Insert new node
+
 pub fn insert_node(new_node: NewNode) -> Result<Node> {
     let mut conn = establish_connection();
 
     diesel::insert_into(nodes::table)
         .values(&new_node)
+        .on_conflict(nodes::name)
+        .do_update()
+        .set(nodes::labels.eq(new_node.labels.as_ref())) // ✅ borrow Option<serde_json::Value>
         .returning(Node::as_returning())
         .get_result(&mut conn)
         .map_err(Into::into)
 }
+
+
+
 
 /// Insert a new node metric
 pub fn insert_node_metric(new_metric: NewNodeMetric) -> Result<NodeMetric> {
