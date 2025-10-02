@@ -57,7 +57,6 @@ USER appuser
 
 # Copy the binary and migrations from builder
 COPY --from=build /out/rustcost /usr/local/bin/rustcost
-COPY migrations /migrations
 
 # Expose API port
 EXPOSE 3000

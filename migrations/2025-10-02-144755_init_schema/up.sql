@@ -1,3 +1,4 @@
+-- Your SQL goes here
 -- ======================
 -- Metadata tables
 -- ======================
