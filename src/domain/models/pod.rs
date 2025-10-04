@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::infra::db::schema::{pods, pod_metrics};
@@ -58,4 +59,11 @@ pub struct NewPodMetric {
     pub cpu_mcores: i64,
     pub memory_bytes: i64,
     pub timestamp: chrono::NaiveDateTime,
+}
+#[derive(Serialize)]
+pub struct PodMetricDto {
+    pub pod_id: i32,
+    pub bucket: NaiveDateTime,
+    pub avg_cpu: f64,
+    pub avg_mem: f64,
 }
