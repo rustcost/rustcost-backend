@@ -1,16 +1,18 @@
-domain/ houses your domain logic following DDD principles, with a subdirectory models/ for defining your domain models.
-handlers/ is where you define your API handlers.
-infra/ encompasses your infrastructure logic, further divided into db/ for database-related logic and repositories/ for defining repositories.
-utils/ is where you define utility functions, including custom extractors for Axum.
+# RustCost Backend
 
+This repository contains the **backend** of [RustCost](https://github.com/rustcost/rustcost-helmchart)
+, a lightweight Kubernetes-native cost monitoring and observability platform.
+The backend is built with Rust (Axum, Diesel) and provides the API and metrics collection for the RustCost frontend.
 
+---
 
+### Developer Notes
 
+These are for maintainers (not required for normal users
 build
-```
+
+```bash
 docker build --build-arg APP_NAME=rustcost -t rustcost .
 docker tag rustcost kimc1992/rustcost:latest
 docker push kimc1992/rustcost:latest
-
-
 ```
