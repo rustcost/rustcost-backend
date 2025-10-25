@@ -1,3 +1,34 @@
-/target
-.idea
+# --- Rust / Cargo ---
+target/
+Cargo.lock
+**/*.rs.bk
+
+# --- Build / Artifacts ---
+*.exe
+*.dll
+*.so
+*.dylib
+*.log
+*.out
+
+# --- Environment / Config ---
 .env
+.env.*
+config/*.local.*
+config/*.dev.*
+config/*.test.*
+
+# --- IDEs / Editors ---
+.vscode/
+.idea/
+*.iml
+.DS_Store
+
+# --- Temporary / Runtime Data ---
+data/
+tmp/
+logs/
+cache/
+
+# --- OS files ---
+Thumbs.db

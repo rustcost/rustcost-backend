@@ -7,23 +7,21 @@ use axum::{
 
 use crate::handlers::nodes::node_handler;
 use crate::handlers::pods::pod_handler;
-use crate::AppState;
 
 /// Build the main application router
-pub fn app_router(state: AppState) -> Router {
+pub fn app_router() -> Router {
     Router::new()
         // Root route
         .route("/", get(root))
         // Health check
         .route("/health", get(health_check))
         // Mount node-related routes under /api/v1
-        .nest("/api/v1/nodes", node_handler::node_routes(state.clone()))
-        .nest("/api/v1/pods", pod_handler::pod_routes(state.clone()))
+        // .nest("/api/v1/nodes", node_handler::node_routes()
+        // .nest("/api/v1/pods", pod_handler::pod_routes()
 
         // Fallback handler for 404
         .fallback(handler_404)
         // Attach shared application state ONCE here
-        .with_state(state)
 }
 
 // Handler for root
