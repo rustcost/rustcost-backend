@@ -1,13 +1,13 @@
 use anyhow::Result;
-use chrono::{Utc, Datelike};
-use tracing::{info, error};
+use chrono::{Datelike, Utc};
 use std::fs;
 use std::path::PathBuf;
+use tracing::{debug, error};
 
 const BASE_PATH: &str = "/data/rustcost/tsdb";
 
 pub async fn run() -> Result<()> {
-    info!("Running daily aggregation task...");
+    debug!("Running daily aggregation task...");
 
     let now = Utc::now();
     let day_path = format!("{BASE_PATH}/day/{:04}-{:02}-{:02}.tsv",
@@ -17,7 +17,7 @@ pub async fn run() -> Result<()> {
 
     let files = read_hour_files(&hour_dir);
     if files.is_empty() {
-        info!("No hourly files to aggregate today");
+        debug!("No hourly files to aggregate today");
         return Ok(());
     }
 
@@ -31,7 +31,7 @@ pub async fn run() -> Result<()> {
     fs::create_dir_all(PathBuf::from(&day_path).parent().unwrap())?;
     fs::write(&day_path, aggregated.join("\n"))?;
 
-    info!(path = %day_path, "Daily aggregation complete");
+    debug!(path = %day_path, "Daily aggregation complete");
     Ok(())
 }
 

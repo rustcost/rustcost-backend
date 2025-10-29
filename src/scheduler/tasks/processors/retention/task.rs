@@ -1,14 +1,14 @@
 use anyhow::Result;
-use chrono::{Utc, Duration};
+use chrono::{Duration, Utc};
 use std::fs;
 use std::path::Path;
-use tracing::info;
+use tracing::debug;
 
 const BASE_PATH: &str = "/data/rustcost/tsdb";
 const RETAIN_DAYS: i64 = 30;
 
 pub async fn run() -> Result<()> {
-    info!("Running retention cleanup...");
+    debug!("Running retention cleanup...");
     let cutoff = Utc::now() - Duration::days(RETAIN_DAYS);
 
     for subdir in ["minute", "hour", "day"] {

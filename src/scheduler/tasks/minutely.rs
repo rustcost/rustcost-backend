@@ -1,8 +1,14 @@
 use anyhow::Result;
-use tracing::{info, error};
+use tracing::{debug, error};
 
 pub async fn run() -> Result<()> {
-    info!("Running minutely task (collectors + summarizers)...");
+    debug!("Running minutely task (collectors + summarizers)...");
+
+    // Meta check (safe and fast)
+    let meta = super::meta::load_meta_state().await?;
+    debug!("Version: {}", meta.version.git_version);
+    debug!("Settings: {:?}", meta.settings);
+
 
     // --- Collectors ---
     if let Err(e) = super::collectors::k8s::run().await {
@@ -15,3 +21,4 @@ pub async fn run() -> Result<()> {
 
     Ok(())
 }
+

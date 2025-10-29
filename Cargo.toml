@@ -3,7 +3,6 @@ name = "rustcost"
 version = "0.1.0"
 edition = "2021"
 
-
 [dependencies]
 axum = { version = "0.8", features = ["macros", "tokio"] }
 chrono = { version = "0.4.41", features = ["serde"] }

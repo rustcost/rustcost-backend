@@ -1,8 +1,8 @@
 use anyhow::Result;
-use tracing::{info, error};
+use tracing::{debug, error};
 
 pub async fn run() -> Result<()> {
-    info!("Running daily task (aggregation + retention)...");
+    debug!("Running daily task (aggregation + retention)...");
 
     if let Err(e) = super::processors::daily::run().await {
         error!(?e, "Daily aggregator failed");

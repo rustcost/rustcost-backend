@@ -1,7 +1,7 @@
-use std::env;
-use dotenvy::dotenv;
-use tokio::sync::OnceCell;
 use anyhow::Result;
+use dotenvy::dotenv;
+use std::env;
+use tokio::sync::OnceCell;
 
 #[derive(Debug)]
 pub struct ServerConfig {

@@ -5,9 +5,6 @@ use axum::{
     Router,
 };
 
-use crate::handlers::nodes::node_handler;
-use crate::handlers::pods::pod_handler;
-
 /// Build the main application router
 pub fn app_router() -> Router {
     Router::new()

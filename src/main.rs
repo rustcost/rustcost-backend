@@ -9,14 +9,15 @@ mod logging;
 mod domain;
 mod errors;
 mod handlers;
-mod libs;
 mod routes;
 mod scheduler;
-mod utils;
+mod core;
 
 // --- Imports ---
-use crate::config::config; // &'static Config
+use crate::config::config;
+// &'static Config
 use crate::routes::app_router;
+use crate::scheduler::schedule::run_minute_loop;
 use crate::scheduler::scheduler_start_all_tasks;
 
 // --- Entry Point ---
@@ -37,6 +38,7 @@ async fn run_server(app_config: &crate::config::Config) {
     let app = app_router();
     let address = format!("{}:{}", app_config.server_host(), app_config.server_port());
     let socket_addr: SocketAddr = address.parse().expect("Invalid socket address");
+    let debug_mode = std::env::var("DEBUG_MODE").is_ok();
 
     tracing::info!("🚀 Listening on http://{}", socket_addr);
 
@@ -44,8 +46,17 @@ async fn run_server(app_config: &crate::config::Config) {
         .await
         .expect("Failed to bind");
 
-    let (shutdown_tx, shutdown_rx) = broadcast::channel::<()>(16);
-    scheduler_start_all_tasks(shutdown_rx).await;
+
+
+    if debug_mode {
+        run_minute_loop(&mut tokio::sync::broadcast::channel::<()>(1).1).await;
+    } else {
+        let (shutdown_tx, shutdown_rx) = broadcast::channel::<()>(16);
+        scheduler_start_all_tasks(shutdown_rx).await;
+    }
+
+
+
 
     axum::serve(listener, app)
         .await

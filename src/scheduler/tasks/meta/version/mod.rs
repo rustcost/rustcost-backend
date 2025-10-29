@@ -1,9 +1,11 @@
 /* Entry point */
-mod task;
-pub use task::run;
+pub mod task;
 
+/* Builds API client (token, cert, base URL) */
+mod client;
 /* Maps K8s API objects → internal models */
+mod mapper;
 /* Data structures */
-pub mod summary_dto;
+pub mod models;
 /* Persists metrics to file/TSDB */
-mod node;
+mod repository;

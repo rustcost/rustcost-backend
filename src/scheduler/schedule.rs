@@ -1,11 +1,10 @@
+use super::tasks::{day_task, hour_task, minute_task};
 // src/scheduler/schedule.rs
 use anyhow::Result;
 use chrono::{Timelike, Utc};
 use tokio::sync::broadcast;
-use tokio::time::{sleep, interval, Duration, MissedTickBehavior};
-use tracing::{error, info, warn};
-
-use super::tasks::{minute_task, hour_task, day_task};
+use tokio::time::{interval, sleep, Duration, MissedTickBehavior};
+use tracing::{debug, error, info, warn};
 
 /// Entry point — start all periodic background tasks.
 /// Call this once from your main() function.
@@ -20,7 +19,7 @@ pub async fn start_all_tasks(mut shutdown: broadcast::Receiver<()>) {
 }
 
 /// Runs every aligned minute (e.g., 12:00:00, 12:01:00 …)
-async fn run_minute_loop(shutdown: &mut broadcast::Receiver<()>) {
+pub async fn run_minute_loop(shutdown: &mut broadcast::Receiver<()>) {
     align_to_next_minute().await;
     let mut ticker = interval(Duration::from_secs(60));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -121,10 +120,10 @@ where
 {
     let retries = [1u64, 3, 10]; // seconds between retries
     for (i, delay) in retries.iter().enumerate() {
-        info!(task = name, attempt = i + 1, "Task start");
+        debug!(task = name, attempt = i + 1, "Task start");
         match task().await {
             Ok(_) => {
-                info!(task = name, attempt = i + 1, "Task succeeded");
+                debug!(task = name, attempt = i + 1, "Task succeeded");
                 return Ok(());
             }
             Err(e) => {

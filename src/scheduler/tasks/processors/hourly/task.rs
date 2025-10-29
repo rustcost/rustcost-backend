@@ -1,14 +1,14 @@
 use anyhow::Result;
-use chrono::{Utc, Timelike};
-use tracing::{info, error};
+use chrono::{Timelike, Utc};
 use std::fs;
 use std::path::PathBuf;
+use tracing::{debug, error};
 
 /// Example configuration: where your min/hour/day files live
 const BASE_PATH: &str = "/data/rustcost/tsdb";
 
 pub async fn run() -> Result<()> {
-    info!("Running hourly aggregation task...");
+    debug!("Running hourly aggregation task...");
     Ok(())
 }
 
