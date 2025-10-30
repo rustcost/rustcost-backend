@@ -77,7 +77,7 @@
 //     end: NaiveDateTime,
 // }
 // /// Determine zoom level (bucket granularity) based on range
-// pub fn zoom_bucket(start: NaiveDateTime, end: NaiveDateTime) -> Option<&'static str> {
+// pub fn zoom_bucket(start: NaiveDateTime, end: NaiveDateTime) -> Option<&'fixed str> {
 //     let diff = end - start;
 //     if diff <= chrono::Duration::days(1) {
 //         Some("minute") // 1일 이하 → 분 단위

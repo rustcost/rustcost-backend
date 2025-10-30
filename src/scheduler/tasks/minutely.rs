@@ -4,10 +4,10 @@ use tracing::{debug, error};
 pub async fn run() -> Result<()> {
     debug!("Running minutely task (collectors + summarizers)...");
 
-    // Meta check (safe and fast)
-    let meta = super::meta::load_meta_state().await?;
-    debug!("Version: {}", meta.version.git_version);
-    debug!("Settings: {:?}", meta.settings);
+    // Info check (safe and fast)
+    let info = super::info::load_info_state().await?;
+    debug!("Version: {}", info.version.git_version);
+    debug!("Settings: {:?}", info.settings);
 
 
     // --- Collectors ---

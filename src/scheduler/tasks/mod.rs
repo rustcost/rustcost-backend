@@ -3,7 +3,7 @@ pub mod processors;
 mod minutely;
 mod hourly;
 mod daily;
-mod meta;
+mod info;
 
 pub use daily::run as day_task;
 pub use hourly::run as hour_task;

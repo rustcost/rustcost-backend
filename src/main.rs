@@ -11,11 +11,11 @@ mod errors;
 mod handlers;
 mod routes;
 mod scheduler;
-mod core;
+pub mod core;
 
 // --- Imports ---
 use crate::config::config;
-// &'static Config
+// &'fixed Config
 use crate::routes::app_router;
 use crate::scheduler::schedule::run_minute_loop;
 use crate::scheduler::scheduler_start_all_tasks;

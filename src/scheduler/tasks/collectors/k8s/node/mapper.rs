@@ -1,15 +1,16 @@
 /* Maps K8s API objects → internal models */
 
-use chrono::Utc;
-use crate::scheduler::tasks::collectors::k8s::node::entity::{NodeInfoEntity, NodeMetricsEntity};
+use chrono::{DateTime, Utc};
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::Node;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, Summary};
 use anyhow::Result;
+use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
+use crate::scheduler::tasks::collectors::k8s::node::entity::NodeMetricsEntity;
 
-pub fn map_summary_to_node_info(summary: &Summary) -> NodeInfoEntity {
-    NodeInfoEntity {
+pub fn map_summary_to_node_info(summary: &Summary) -> InfoNodeEntity {
+    InfoNodeEntity {
         node_name: Some(summary.node.node_name.clone()),
-        last_updated_info_at: Some(Utc::now().to_rfc3339()),
+        last_updated_info_at: Some(Utc::now().to_rfc3339().parse().unwrap()),
         ready: Some(true),
         ..Default::default() // leaves all other fields as None
     }
@@ -67,7 +68,7 @@ fn sum_network_interfaces(net: &NetworkStats) -> Option<(Option<u64>, Option<u64
 
 
 /// Maps a Kubernetes Node (from /api/v1/nodes) into our DTO for persistence.
-pub fn map_node_to_info_dto(node: &Node) -> Result<NodeInfoEntity> {
+pub fn map_node_to_info_dto(node: &Node) -> Result<InfoNodeEntity> {
     let metadata = &node.metadata;
     let status = node.status.as_ref();
     let spec = node.spec.as_ref();
@@ -117,12 +118,16 @@ pub fn map_node_to_info_dto(node: &Node) -> Result<NodeInfoEntity> {
     };
 
     // Build DTO
-    Ok(NodeInfoEntity {
+    Ok(InfoNodeEntity {
         node_name: Some(metadata.name.clone()),
         node_uid: metadata.uid.clone(),
-        creation_timestamp: metadata.creationTimestamp.clone(),
+        creation_timestamp: metadata
+            .creationTimestamp
+            .as_ref()
+            .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+            .map(|dt| dt.with_timezone(&Utc)),
         resource_version: metadata.resourceVersion.clone(),
-        last_updated_info_at: Some(now),
+        last_updated_info_at: Some(now.parse()?),
 
         deleted: Some(false),
         last_check_deleted_count: Some(0),

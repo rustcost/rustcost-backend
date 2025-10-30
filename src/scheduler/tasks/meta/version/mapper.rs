@@ -1,1 +1,0 @@
-/* Maps K8s API objects → internal models */

@@ -6,37 +6,38 @@ use std::path::Path;
 use std::process::Command;
 use anyhow::{anyhow, Context};
 use crate::scheduler::tasks::collectors::k8s::node::api::{fetch_nodes, fetch_nodes_json, get_latest_resource_version};
-use crate::scheduler::tasks::collectors::k8s::node::entity::NodeInfoEntity;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
 use crate::scheduler::tasks::collectors::k8s::node::mapper::{map_node_to_info_dto, map_summary_to_metrics, map_summary_to_node_info};
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::NodeList;
-use crate::scheduler::tasks::collectors::k8s::node::repository::{append_metrics, ensure_node_dir, write_info_if_missing};
+use crate::scheduler::tasks::collectors::k8s::node::metric_node_collector_repository::{append_metrics};
 use std::io::Write;
 use reqwest::Client;
 use tracing::log::debug;
+use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
+use crate::core::persistence::info::dynamic::node::info_node_collector_repository_trait::InfoNodeCollectorRepository;
+use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
+use crate::scheduler::tasks::collectors::k8s::node::info_node_collector_repository::InfoNodeCollectorRepositoryImpl;
 
-pub async fn handle_node(summary: &Summary) -> std::result::Result<(), anyhow::Error>{
+pub async fn handle_node(summary: &Summary) -> Result<bool, anyhow::Error> {
     let node_name = &summary.node.node_name;
+    let repo = InfoNodeCollectorRepositoryImpl::default();
 
-    ensure_node_dir(node_name)?;
-
-    /* ---------- Step 1: Write info.rci ---------- */
+    // Step 1: Write info.rci if missing
     let node_info = map_summary_to_node_info(summary);
-    write_info_if_missing(node_name, &node_info)?;
+    let created = repo.create_if_missing(node_name, &node_info)?;
 
-    /* ---------- Step 2: Append metrics ---------- */
+    // Step 2: Append metrics
     let metrics_dto = map_summary_to_metrics(summary);
     append_metrics(node_name, &metrics_dto)?;
 
-    Ok(())
+    Ok(created)
 }
-
 /// Keeps track of last known cluster resourceVersion in-memory.
 /// You can later persist it to DB if needed.
 static mut LAST_RESOURCE_VERSION: Option<String> = None;
 
 /// Checks cluster nodes and updates node info files if any node is new or changed.
-pub async fn update_node_infos(token: &str, client: &Client) -> Result<NodeList, anyhow::Error> {
+pub async fn update_node_infos(token: &str, client: &Client, updated_nodes:&Vec<String>) -> Result<NodeList, anyhow::Error> {
     let latest_version = get_latest_resource_version(token, client).await?;
 
     // SAFETY: this is a single-threaded mutable global (ok in async context if used carefully)

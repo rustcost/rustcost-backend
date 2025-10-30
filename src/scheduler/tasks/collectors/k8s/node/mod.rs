@@ -1,8 +1,10 @@
 pub mod api;
 pub mod task;
-mod entity;
-mod dto;
 pub mod mapper;
 pub mod node_list_dto;
 
-pub mod repository;
+pub mod metric_node_collector_repository;
+
+mod info_node_collector_repository;
+
+mod entity;

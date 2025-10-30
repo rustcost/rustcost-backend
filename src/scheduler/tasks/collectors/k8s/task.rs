@@ -18,6 +18,11 @@ use crate::scheduler::tasks::collectors::k8s::node::task::{handle_node, update_n
 /// Collects node-level stats from the Kubelet `/stats/summary` endpoint.
 pub async fn run() -> Result<()> {
     debug!("Starting K8s node stats task...");
+    //
+    let mut updated_nodes = Vec::new();
+    let mut updated_pods = Vec::new();
+    let mut updated_containers = Vec::new();
+
     // --- Build client & token ---
     let token = read_token()?;
     let client = build_client()?;
@@ -31,8 +36,15 @@ pub async fn run() -> Result<()> {
 
         match fetch_node_summary(&token, &client, &node_name).await {
             Ok(summary) => {
-                if let Err(e) = handle_summary(&summary).await {
-                    error!("❌ Failed to handle summary for {}: {:?}", node_name, e);
+                match handle_summary(&summary).await {
+                    Ok(result) => {
+                        if let Some(name) = result.node_name {
+                            updated_nodes.push(name);
+                        }
+                        updated_pods.extend(result.updated_pods);
+                        updated_containers.extend(result.updated_containers);
+                    }
+                    Err(e) => error!("❌ Failed to handle summary for {}: {:?}", node_name, e),
                 }
             }
             Err(e) => {
@@ -42,24 +54,39 @@ pub async fn run() -> Result<()> {
     }
 
     // --- Step 3
-    // UPDATE NODE INFO
-    update_node_infos(&token, &client).await?;
-    // UPDATE POD INFO
-    // UPDATE CONTAINER INFO
+    if !updated_nodes.is_empty() {
+        update_node_infos(&token, &client, &updated_nodes).await?;
+    }
+    // if !updated_pods.is_empty() {
+    //     update_pod_infos(&token, &client, &updated_pods).await?;
+    // }
+    // if !updated_containers.is_empty() {
+    //     update_container_infos(&token, &client, &updated_containers).await?;
+    // }
 
     Ok(())
 }
 
+#[derive(Debug, Default)]
+pub struct SummaryHandleResultDto {
+    pub node_name: Option<String>,
+    pub updated_pods: Vec<String>,
+    pub updated_containers: Vec<String>,
+}
 
 
 /// Handle and persist one `/stats/summary` response
-pub async fn handle_summary(summary: &Summary) -> Result<()> {
-    // ✅ Use ? instead of expect() for propagation
-    handle_node(summary).await?;
-    // handle_pod(summary).await?;
-    // handle_container(summary).await?;
+pub async fn handle_summary(summary: &Summary) -> Result<SummaryHandleResultDto> {
+    let mut result = SummaryHandleResultDto::default();
 
-    Ok(())
+    if handle_node(summary).await? {
+        result.node_name = Some(summary.node.node_name.clone());
+    }
+
+    // result.updated_pods = pod::handle_pod(summary).await?;
+    // result.updated_containers = container::handle_container(summary).await?;
+
+    Ok(result)
 }
 
 /* ---------------- Tests ---------------- */

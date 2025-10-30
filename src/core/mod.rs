@@ -8,4 +8,5 @@
 //! specific runtime (CLI, HTTP server, etc.).
 
 pub mod kube_client;
-mod constants;
+pub mod constants;
+pub mod persistence;

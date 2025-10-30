@@ -2,10 +2,10 @@ use anyhow::{Context, Result};
 use reqwest::Client;
 use chrono::Utc;
 use std::env;
-use super::models::VersionInfo;
+use crate::core::persistence::info::fixed::version::info_version_entity::InfoVersionEntity;
 
 /// Fetches Kubernetes version info from API_SERVER in .env
-pub async fn fetch_version() -> Result<VersionInfo> {
+pub async fn fetch_version() -> Result<InfoVersionEntity> {
     // Load from environment (dotenv or process env)
     dotenvy::dotenv().ok();
     let api_server =
@@ -26,7 +26,7 @@ pub async fn fetch_version() -> Result<VersionInfo> {
         .await
         .context("Failed to parse version JSON")?;
 
-    Ok(VersionInfo {
+    Ok(InfoVersionEntity {
         date: Utc::now().to_rfc3339(),
         major: resp["major"].as_str().unwrap_or_default().to_string(),
         minor: resp["minor"].as_str().unwrap_or_default().to_string(),
@@ -36,5 +36,6 @@ pub async fn fetch_version() -> Result<VersionInfo> {
         go_version: resp["goVersion"].as_str().unwrap_or_default().to_string(),
         compiler: resp["compiler"].as_str().unwrap_or_default().to_string(),
         platform: resp["platform"].as_str().unwrap_or_default().to_string(),
+        updated_at: Default::default(),
     })
 }
