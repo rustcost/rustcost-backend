@@ -5,7 +5,7 @@ use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::Node;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, Summary};
 use anyhow::Result;
 use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
-use crate::scheduler::tasks::collectors::k8s::node::entity::NodeMetricsEntity;
+use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
 
 pub fn map_summary_to_node_info(summary: &Summary) -> InfoNodeEntity {
     InfoNodeEntity {
@@ -25,7 +25,7 @@ pub fn map_summary_to_metrics(summary: &Summary) -> NodeMetricsEntity {
         .unwrap_or((None, None, None, None));
 
     NodeMetricsEntity {
-        time: Utc::now().to_rfc3339(),
+        time: Utc::now(),
 
         // CPU
         cpu_usage_nano_cores: n.cpu.usage_nano_cores,
@@ -122,11 +122,11 @@ pub fn map_node_to_info_dto(node: &Node) -> Result<InfoNodeEntity> {
         node_name: Some(metadata.name.clone()),
         node_uid: metadata.uid.clone(),
         creation_timestamp: metadata
-            .creationTimestamp
+            .creation_timestamp
             .as_ref()
             .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
             .map(|dt| dt.with_timezone(&Utc)),
-        resource_version: metadata.resourceVersion.clone(),
+        resource_version: metadata.resource_version.clone(),
         last_updated_info_at: Some(now.parse()?),
 
         deleted: Some(false),
@@ -134,12 +134,12 @@ pub fn map_node_to_info_dto(node: &Node) -> Result<InfoNodeEntity> {
 
         hostname,
         internal_ip,
-        architecture: status.and_then(|s| s.nodeInfo.as_ref().and_then(|ni| ni.architecture.clone())),
-        os_image: status.and_then(|s| s.nodeInfo.as_ref().and_then(|ni| ni.osImage.clone())),
-        kernel_version: status.and_then(|s| s.nodeInfo.as_ref().and_then(|ni| ni.kernelVersion.clone())),
-        kubelet_version: status.and_then(|s| s.nodeInfo.as_ref().and_then(|ni| ni.kubeletVersion.clone())),
-        container_runtime: status.and_then(|s| s.nodeInfo.as_ref().and_then(|ni| ni.containerRuntimeVersion.clone())),
-        operating_system: status.and_then(|s| s.nodeInfo.as_ref().and_then(|ni| ni.operatingSystem.clone())),
+        architecture: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.architecture.clone())),
+        os_image: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.os_image.clone())),
+        kernel_version: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.kernel_version.clone())),
+        kubelet_version: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.kubelet_version.clone())),
+        container_runtime: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.container_runtime_version.clone())),
+        operating_system: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.operating_system.clone())),
 
         cpu_capacity_cores: status
             .and_then(|s| s.capacity.as_ref().and_then(|c| c.get("cpu")))
@@ -187,7 +187,7 @@ pub fn map_node_to_info_dto(node: &Node) -> Result<InfoNodeEntity> {
         image_total_size_bytes: status.and_then(|s| {
             s.images.as_ref().map(|imgs| {
                 imgs.iter()
-                    .map(|i| i.sizeBytes.unwrap_or(0))
+                    .map(|i| i.size_bytes.unwrap_or(0))
                     .sum::<u64>()
             })
         }),

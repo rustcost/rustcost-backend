@@ -1,8 +1,9 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NodeMetricsEntity {
-    pub time: String,
+    pub time: DateTime<Utc>,
 
     // CPU
     pub cpu_usage_nano_cores: Option<u64>,

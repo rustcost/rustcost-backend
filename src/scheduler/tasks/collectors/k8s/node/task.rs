@@ -9,26 +9,31 @@ use crate::scheduler::tasks::collectors::k8s::node::api::{fetch_nodes, fetch_nod
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
 use crate::scheduler::tasks::collectors::k8s::node::mapper::{map_node_to_info_dto, map_summary_to_metrics, map_summary_to_node_info};
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::NodeList;
-use crate::scheduler::tasks::collectors::k8s::node::metric_node_collector_repository::{append_metrics};
 use std::io::Write;
 use reqwest::Client;
 use tracing::log::debug;
 use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use crate::core::persistence::info::dynamic::node::info_node_collector_repository_trait::InfoNodeCollectorRepository;
 use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
+use crate::core::persistence::metrics::node::minute::metric_node_minute_collector_repository_trait::MetricNodeMinuteCollectorRepository;
+use crate::core::persistence::metrics::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
 use crate::scheduler::tasks::collectors::k8s::node::info_node_collector_repository::InfoNodeCollectorRepositoryImpl;
+use crate::scheduler::tasks::collectors::k8s::node::metric_node_minute_collector_repository::MetricNodeMinuteCollectorRepositoryImpl;
 
 pub async fn handle_node(summary: &Summary) -> Result<bool, anyhow::Error> {
     let node_name = &summary.node.node_name;
-    let repo = InfoNodeCollectorRepositoryImpl::default();
 
     // Step 1: Write info.rci if missing
+    let info_repo = InfoNodeCollectorRepositoryImpl::default();
     let node_info = map_summary_to_node_info(summary);
-    let created = repo.create_if_missing(node_name, &node_info)?;
+    let created = info_repo.create_if_missing(node_name, &node_info)?;
 
     // Step 2: Append metrics
     let metrics_dto = map_summary_to_metrics(summary);
-    append_metrics(node_name, &metrics_dto)?;
+    let metric_repo = MetricNodeMinuteCollectorRepositoryImpl {
+        adapter: MetricNodeMinuteFsAdapter,
+    };
+    metric_repo.append_row(node_name, &metrics_dto)?; // ✅ correct method
 
     Ok(created)
 }
@@ -68,7 +73,7 @@ pub async fn update_node_infos(token: &str, client: &Client, updated_nodes:&Vec<
         Ok(node_list)
     } else {
         Ok(NodeList {
-            apiVersion: None,
+            api_version: None,
             kind: Some("NodeList".to_string()),
             items: vec![],
             metadata: None,
