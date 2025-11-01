@@ -1,14 +1,14 @@
+use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
+use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use std::{
+    fs::File,
     fs::{self, OpenOptions},
     io::Write,
-    path::Path,
-    fs::File,
     io::{BufRead, BufReader},
+    path::Path,
 };
-use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
-use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
 
 /// Adapter for node minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.

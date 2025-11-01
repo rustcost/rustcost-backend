@@ -1,11 +1,11 @@
 /* Maps K8s API objects → internal models */
 
-use chrono::{DateTime, Utc};
+use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
+use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::Node;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, Summary};
 use anyhow::Result;
-use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
-use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
+use chrono::{DateTime, Utc};
 use std::str::FromStr;
 
 pub fn map_summary_to_node_info(summary: &Summary) -> InfoNodeEntity {

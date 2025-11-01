@@ -1,3 +1,5 @@
+use super::info_setting_entity::InfoSettingEntity;
+use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use std::{
@@ -5,8 +7,6 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
-use super::info_setting_entity::InfoSettingEntity;
 
 /// Location of the persisted settings file.
 const PATH: &str = "data/info/settings.rci";

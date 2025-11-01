@@ -1,6 +1,6 @@
-use anyhow::Result;
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
+use anyhow::Result;
 
 /// Repository trait for reading pod minute metrics (API layer).
 pub trait MetricPodMinuteCollectorRepository: Send + Sync {

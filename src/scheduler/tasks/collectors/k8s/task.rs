@@ -1,20 +1,12 @@
-use std::collections::HashMap;
-use std::fs;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
-use std::process::Command;
-use anyhow::{anyhow, Context, Result};
-use chrono::Utc;
-use reqwest::Client;
-use tracing::{debug, error, info};
-use serde_json::to_string_pretty;
-use crate::core::kube_client::{api_server, build_client, read_token};
-use crate::scheduler::tasks::collectors::k8s::node::mapper::{ map_summary_to_metrics, map_summary_to_node_info};
-use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
+use crate::core::kube_client::{build_client, read_token};
 use crate::scheduler::tasks::collectors::k8s::node::client::{fetch_node_summary, fetch_nodes};
 use crate::scheduler::tasks::collectors::k8s::node::task::{handle_node, update_node_info};
 use crate::scheduler::tasks::collectors::k8s::pod::task::handle_pod;
+use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
+use anyhow::Result;
+use std::fs;
+use std::process::Command;
+use tracing::{debug, error, info};
 
 /// Collects node-level stats from the Kubelet `/stats/summary` endpoint.
 pub async fn run() -> Result<()> {

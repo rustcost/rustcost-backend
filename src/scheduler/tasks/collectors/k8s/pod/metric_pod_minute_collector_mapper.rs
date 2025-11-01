@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, PodSummary};
+use chrono::Utc;
 
 pub fn map_pod_summary_to_metrics(pod: &PodSummary) -> MetricPodEntity {
     // --- Compute summed physical network stats ---

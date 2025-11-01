@@ -1,4 +1,3 @@
-use anyhow::Result;
 use crate::core::persistence::info::dynamic::pod::info_pod_collector_repository_trait::InfoPodCollectorRepository;
 use crate::core::persistence::metrics::pod::minute::metric_pod_minute_collector_repository_trait::MetricPodMinuteCollectorRepository;
 use crate::core::persistence::metrics::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
@@ -7,6 +6,7 @@ use crate::scheduler::tasks::collectors::k8s::pod::info_pod_minute_collector_rep
 use crate::scheduler::tasks::collectors::k8s::pod::metric_pod_minute_collector_mapper::map_pod_summary_to_metrics;
 use crate::scheduler::tasks::collectors::k8s::pod::metric_pod_minute_collector_repository::MetricPodMinuteCollectorRepositoryImpl;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
+use anyhow::Result;
 
 pub async fn handle_pod(summary: &Summary) -> Result<bool> {
     let mut any_created = false;

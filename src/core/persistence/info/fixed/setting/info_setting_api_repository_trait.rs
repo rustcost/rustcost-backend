@@ -1,6 +1,6 @@
-use anyhow::Result;
-use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use super::info_setting_entity::InfoSettingEntity;
+use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
+use anyhow::Result;
 
 /// API repository trait for settings.
 /// API can read and update, but usually not create/delete.

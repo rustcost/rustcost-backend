@@ -1,6 +1,6 @@
-use anyhow::Result;
-use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use super::info_pod_entity::InfoPodEntity;
+use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
+use anyhow::Result;
 
 /// Collector repository trait for pods.
 ///

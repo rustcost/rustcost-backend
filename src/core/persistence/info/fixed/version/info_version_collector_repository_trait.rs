@@ -1,6 +1,6 @@
-use anyhow::Result;
-use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use super::info_version_entity::InfoVersionEntity;
+use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
+use anyhow::Result;
 
 /// Collector repository trait for versions.
 /// Collector may read and occasionally create/update versions locally.

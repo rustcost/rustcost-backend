@@ -1,15 +1,15 @@
-use anyhow::{anyhow, Result};
-use chrono::{DateTime, Utc};
-use std::{
-    fs::{self, OpenOptions},
-    io::Write,
-    path::Path,
-    fs::File,
-    io::{BufRead, BufReader},
-};
-use std::io::BufWriter;
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
+use anyhow::{anyhow, Result};
+use chrono::{DateTime, Utc};
+use std::io::BufWriter;
+use std::{
+    fs::File,
+    fs::{self, OpenOptions},
+    io::Write,
+    io::{BufRead, BufReader},
+    path::Path,
+};
 
 /// Adapter for pod minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.

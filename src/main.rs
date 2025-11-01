@@ -1,7 +1,6 @@
-use std::{env, fs, net::SocketAddr, path::Path};
+use std::net::SocketAddr;
 use tokio::sync::broadcast;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::{fmt, EnvFilter};
 
 // --- Modules ---
 mod config;

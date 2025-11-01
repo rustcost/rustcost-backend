@@ -1,8 +1,8 @@
-use anyhow::Result;
 use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
+use crate::core::persistence::info::dynamic::node::info_node_collector_repository_trait::InfoNodeCollectorRepository;
 use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
 use crate::core::persistence::info::dynamic::node::info_node_fs_adapter::InfoNodeFsAdapter;
-use crate::core::persistence::info::dynamic::node::info_node_collector_repository_trait::InfoNodeCollectorRepository;
+use anyhow::Result;
 
 /// Concrete collector-side repository implementation for managing node info.
 ///

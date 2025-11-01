@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use crate::core::persistence::info::dynamic::pod::info_pod_entity::InfoPodEntity;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::PodSummary;
+use chrono::{DateTime, Utc};
 
 pub fn map_pod_summary_to_info(pod: &PodSummary, node_name: &str) -> InfoPodEntity {
     InfoPodEntity {

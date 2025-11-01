@@ -1,11 +1,11 @@
-use std::process::Command;
-use reqwest::Client;
 use crate::core::kube_client::api_server;
-use anyhow::{anyhow, Context, Result};
-use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
-use tracing::{debug, error, info};
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::NodeList;
+use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
+use anyhow::{anyhow, Context, Result};
+use reqwest::Client;
 use serde_json::Value;
+use std::process::Command;
+use tracing::debug;
 
 pub async fn fetch_nodes(token: &str, client: &Client) -> Result<NodeList> {
     let nodes_url = format!("{}/api/v1/nodes", api_server());

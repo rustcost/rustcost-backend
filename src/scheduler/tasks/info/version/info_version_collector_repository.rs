@@ -1,8 +1,8 @@
-use anyhow::Result;
 use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use crate::core::persistence::info::fixed::version::info_version_collector_repository_trait::InfoVersionCollectorRepository;
 use crate::core::persistence::info::fixed::version::info_version_entity::InfoVersionEntity;
 use crate::core::persistence::info::fixed::version::info_version_fs_adapter::InfoVersionFsAdapter;
+use anyhow::Result;
 
 /// Concrete collector-side repository implementation for managing Versions.
 /// Bridges the collector application logic with the file-based adapter.

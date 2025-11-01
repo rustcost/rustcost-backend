@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::fs;
 
 /// A simple generic trait for FS_ADAPTER operations.
 pub trait InfoDynamicFsAdapterTrait<T>: Send + Sync {

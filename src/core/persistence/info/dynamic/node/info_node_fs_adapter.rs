@@ -1,11 +1,11 @@
+use super::info_node_entity::InfoNodeEntity;
+use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use anyhow::{Context, Result};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
-use super::info_node_entity::InfoNodeEntity;
 
 /// File-based FS adapter for the `InfoNodeEntity`.
 ///

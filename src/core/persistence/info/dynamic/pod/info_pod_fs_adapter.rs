@@ -1,11 +1,11 @@
+use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
+use crate::core::persistence::info::dynamic::pod::info_pod_entity::InfoPodEntity;
 use anyhow::{Context, Result};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
-use crate::core::persistence::info::dynamic::pod::info_pod_entity::InfoPodEntity;
 
 /// File-based FS adapter for `InfoPodEntity`.
 ///

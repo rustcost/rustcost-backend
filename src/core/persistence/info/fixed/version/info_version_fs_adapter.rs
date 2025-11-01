@@ -1,11 +1,11 @@
+use super::info_version_entity::InfoVersionEntity;
+use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use anyhow::{Context, Result};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
-use super::info_version_entity::InfoVersionEntity;
 
 /// Location of the persisted version file.
 const PATH: &str = "data/info/version.rci";

@@ -1,6 +1,6 @@
-use anyhow::Result;
-use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use super::info_version_entity::InfoVersionEntity;
+use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
+use anyhow::Result;
 
 /// API repository trait for versions.
 /// API can read and update, but usually not create/delete.

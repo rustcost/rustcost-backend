@@ -1,8 +1,8 @@
-use anyhow::{Context, Result};
-use reqwest::Client;
-use chrono::Utc;
-use std::env;
 use crate::core::persistence::info::fixed::version::info_version_entity::InfoVersionEntity;
+use anyhow::{Context, Result};
+use chrono::Utc;
+use reqwest::Client;
+use std::env;
 
 /// Fetches Kubernetes version info from API_SERVER in .env
 pub async fn fetch_version() -> Result<InfoVersionEntity> {
