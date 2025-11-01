@@ -14,13 +14,13 @@ pub trait InfoNodeCollectorRepository: Send + Sync {
     }
 
     /// Creates node info for a specific node.
-    fn create(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
-        self.fs_adapter().insert(node_name, data)
+    fn create(&self, data: &InfoNodeEntity) -> Result<()> {
+        self.fs_adapter().insert(data)
     }
 
     /// Updates node info for a specific node.
-    fn update(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
-        self.fs_adapter().update(node_name, data)
+    fn update(&self, data: &InfoNodeEntity) -> Result<()> {
+        self.fs_adapter().update(data)
     }
     fn exists(&self, node_name: &str) -> Result<bool>;
 

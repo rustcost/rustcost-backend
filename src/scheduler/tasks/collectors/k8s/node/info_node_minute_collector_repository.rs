@@ -30,13 +30,13 @@ impl InfoNodeCollectorRepository for InfoNodeCollectorRepositoryImpl {
     }
 
     /// Creates (inserts) node info for a specific node.
-    fn create(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
-        self.adapter.insert(node_name, data)
+    fn create(&self, data: &InfoNodeEntity) -> Result<()> {
+        self.adapter.insert(data)
     }
 
     /// Updates node info for a specific node.
-    fn update(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
-        self.adapter.update(node_name, data)
+    fn update(&self, data: &InfoNodeEntity) -> Result<()> {
+        self.adapter.update(data)
     }
 
     fn exists(&self, node_name: &str) -> Result<bool> {
@@ -52,7 +52,7 @@ impl InfoNodeCollectorRepository for InfoNodeCollectorRepositoryImpl {
         if self.adapter.exists(node_name)? {
             return Ok(false);
         }
-        self.adapter.insert(node_name, data)?;
+        self.adapter.insert(data)?;
         Ok(true)
     }
 }

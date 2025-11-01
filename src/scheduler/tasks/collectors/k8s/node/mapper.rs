@@ -6,6 +6,7 @@ use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, Summar
 use anyhow::Result;
 use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
 use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
+use std::str::FromStr;
 
 pub fn map_summary_to_node_info(summary: &Summary) -> InfoNodeEntity {
     InfoNodeEntity {
@@ -67,130 +68,169 @@ fn sum_network_interfaces(net: &NetworkStats) -> Option<(Option<u64>, Option<u64
 
 
 
-/// Maps a Kubernetes Node (from /api/v1/nodes) into our DTO for persistence.
-pub fn map_node_to_info_dto(node: &Node) -> Result<InfoNodeEntity> {
+
+/// Converts a Kubernetes `Node` object into an `InfoNodeEntity`.
+pub fn map_node_to_node_info_entity(node: &Node) -> Result<InfoNodeEntity> {
     let metadata = &node.metadata;
     let status = node.status.as_ref();
     let spec = node.spec.as_ref();
 
-    let now = Utc::now().to_rfc3339();
+    // Parse creation timestamp (if exists)
+    let creation_timestamp = metadata
+        .creation_timestamp
+        .as_ref()
+        .and_then(|ts| DateTime::from_str(ts).ok());
 
-    // Collect labels and annotations into comma-joined strings
-    let label_str = metadata.labels.as_ref().map(|map| {
-        map.iter()
-            .map(|(k, v)| format!("{k}={v}"))
-            .collect::<Vec<_>>()
-            .join(",")
-    });
-
-    let annotation_str = metadata.annotations.as_ref().map(|map| {
-        map.iter()
-            .map(|(k, v)| format!("{k}={v}"))
-            .collect::<Vec<_>>()
-            .join(",")
-    });
-
-    let taints_str = spec.and_then(|s| {
-        s.taints.as_ref().map(|taints| {
-            taints
-                .iter()
-                .map(|t| format!("{}={} ({})", t.key, t.value.as_deref().unwrap_or(""), t.effect))
-                .collect::<Vec<_>>()
-                .join(",")
+    // Extract addresses (hostname, internal IP)
+    let (hostname, internal_ip) = status
+        .and_then(|s| s.addresses.as_ref())
+        .map(|addresses| {
+            let mut hostname = None;
+            let mut internal_ip = None;
+            for addr in addresses {
+                match addr.address_type.as_str() {
+                    "Hostname" => hostname = Some(addr.address.clone()),
+                    "InternalIP" => internal_ip = Some(addr.address.clone()),
+                    _ => {}
+                }
+            }
+            (hostname, internal_ip)
         })
-    });
+        .unwrap_or_default();
 
-    // Extract addresses
-    let (internal_ip, hostname) = if let Some(status) = status {
-        let internal_ip = status
-            .addresses
-            .as_ref()
-            .and_then(|a| a.iter().find(|x| x.address_type == "InternalIP"))
-            .map(|x| x.address.clone());
-        let hostname = status
-            .addresses
-            .as_ref()
-            .and_then(|a| a.iter().find(|x| x.address_type == "Hostname"))
-            .map(|x| x.address.clone());
-        (internal_ip, hostname)
-    } else {
-        (None, None)
+    // Extract NodeSystemInfo
+    let sys_info = status.and_then(|s| s.node_info.as_ref());
+    let (architecture, os_image, kernel_version, kubelet_version, container_runtime, operating_system) =
+        sys_info
+            .map(|info| {
+                (
+                    info.architecture.clone(),
+                    info.os_image.clone(),
+                    info.kernel_version.clone(),
+                    info.kubelet_version.clone(),
+                    info.container_runtime_version.clone(),
+                    info.operating_system.clone(),
+                )
+            })
+            .unwrap_or_default();
+
+    // Parse capacities and allocatables
+    let capacity = status.and_then(|s| s.capacity.as_ref());
+    let allocatable = status.and_then(|s| s.allocatable.as_ref());
+
+    let parse_cpu = |v: Option<&String>| {
+        v.and_then(|s| s.trim_end_matches('m').parse::<u32>().ok())
+            .map(|millicores| millicores / 1000)
+    };
+    let parse_mem = |v: Option<&String>| {
+        v.and_then(|s| {
+            let s = s.to_lowercase();
+            if s.ends_with("ki") {
+                s.trim_end_matches("ki").parse::<u64>().ok().map(|v| v * 1024)
+            } else if s.ends_with('k') {
+                s.trim_end_matches('k').parse::<u64>().ok().map(|v| v * 1000)
+            } else if s.ends_with("mi") {
+                s.trim_end_matches("mi").parse::<u64>().ok().map(|v| v * 1024 * 1024)
+            } else if s.ends_with('m') {
+                s.trim_end_matches('m').parse::<u64>().ok().map(|v| v * 1000 * 1000)
+            } else if s.ends_with("gi") {
+                s.trim_end_matches("gi").parse::<u64>().ok().map(|v| v * 1024 * 1024 * 1024)
+            } else {
+                s.parse::<u64>().ok()
+            }
+        })
     };
 
-    // Build DTO
+    let cpu_capacity_cores = parse_cpu(capacity.and_then(|c| c.get("cpu")));
+    let memory_capacity_bytes = parse_mem(capacity.and_then(|c| c.get("memory")));
+    let pod_capacity = capacity
+        .and_then(|c| c.get("pods"))
+        .and_then(|v| v.parse::<u32>().ok());
+    let ephemeral_storage_capacity_bytes =
+        parse_mem(capacity.and_then(|c| c.get("ephemeral-storage")));
+
+    let cpu_allocatable_cores = parse_cpu(allocatable.and_then(|a| a.get("cpu")));
+    let memory_allocatable_bytes = parse_mem(allocatable.and_then(|a| a.get("memory")));
+    let pod_allocatable = allocatable
+        .and_then(|a| a.get("pods"))
+        .and_then(|v| v.parse::<u32>().ok());
+    let ephemeral_storage_allocatable_bytes =
+        parse_mem(allocatable.and_then(|a| a.get("ephemeral-storage")));
+
+    // Determine readiness
+    let ready = status
+        .and_then(|s| s.conditions.as_ref())
+        .and_then(|conds| {
+            conds.iter()
+                .find(|c| c.condition_type == "Ready")
+                .map(|c| c.status == "True")
+        });
+
+    // Serialize taints, labels, annotations
+    let taints = spec
+        .and_then(|s| s.taints.as_ref())
+        .map(|t| {
+            t.iter()
+                .map(|t| format!("{}={} ({})", t.key, t.value.clone().unwrap_or_default(), t.effect))
+                .collect::<Vec<_>>()
+                .join(", ")
+        });
+
+    let label = metadata
+        .labels
+        .as_ref()
+        .map(|l| serde_json::to_string(l).unwrap_or_default());
+    let annotation = metadata
+        .annotations
+        .as_ref()
+        .map(|a| serde_json::to_string(a).unwrap_or_default());
+
+    // Images
+    let (image_count, image_names, image_total_size_bytes) = status
+        .and_then(|s| s.images.as_ref())
+        .map(|imgs| {
+            let count = imgs.len() as u32;
+            let names = imgs
+                .iter()
+                .flat_map(|i| i.names.clone())
+                .collect::<Vec<_>>();
+            let total_size = imgs
+                .iter()
+                .filter_map(|i| i.size_bytes)
+                .sum::<u64>();
+            (Some(count), Some(names), Some(total_size))
+        })
+        .unwrap_or((None, None, None));
+
     Ok(InfoNodeEntity {
         node_name: Some(metadata.name.clone()),
         node_uid: metadata.uid.clone(),
-        creation_timestamp: metadata
-            .creation_timestamp
-            .as_ref()
-            .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
-            .map(|dt| dt.with_timezone(&Utc)),
+        creation_timestamp,
         resource_version: metadata.resource_version.clone(),
-        last_updated_info_at: Some(now.parse()?),
-
-        deleted: Some(false),
-        last_check_deleted_count: Some(0),
-
         hostname,
         internal_ip,
-        architecture: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.architecture.clone())),
-        os_image: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.os_image.clone())),
-        kernel_version: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.kernel_version.clone())),
-        kubelet_version: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.kubelet_version.clone())),
-        container_runtime: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.container_runtime_version.clone())),
-        operating_system: status.and_then(|s| s.node_info.as_ref().and_then(|ni| ni.operating_system.clone())),
-
-        cpu_capacity_cores: status
-            .and_then(|s| s.capacity.as_ref().and_then(|c| c.get("cpu")))
-            .and_then(|s| s.parse::<u32>().ok()),
-        memory_capacity_bytes: status
-            .and_then(|s| s.capacity.as_ref().and_then(|c| c.get("memory")))
-            .and_then(|s| parse_quantity_to_bytes(s)),
-        pod_capacity: status
-            .and_then(|s| s.capacity.as_ref().and_then(|c| c.get("pods")))
-            .and_then(|s| s.parse::<u32>().ok()),
-        ephemeral_storage_capacity_bytes: status
-            .and_then(|s| s.capacity.as_ref().and_then(|c| c.get("ephemeral-storage")))
-            .and_then(|s| parse_quantity_to_bytes(s)),
-
-        cpu_allocatable_cores: status
-            .and_then(|s| s.allocatable.as_ref().and_then(|a| a.get("cpu")))
-            .and_then(|s| s.parse::<u32>().ok()),
-        memory_allocatable_bytes: status
-            .and_then(|s| s.allocatable.as_ref().and_then(|a| a.get("memory")))
-            .and_then(|s| parse_quantity_to_bytes(s)),
-        ephemeral_storage_allocatable_bytes: status
-            .and_then(|s| s.allocatable.as_ref().and_then(|a| a.get("ephemeral-storage")))
-            .and_then(|s| parse_quantity_to_bytes(s)),
-        pod_allocatable: status
-            .and_then(|s| s.allocatable.as_ref().and_then(|a| a.get("pods")))
-            .and_then(|s| s.parse::<u32>().ok()),
-
-        ready: status
-            .and_then(|s| s.conditions.as_ref())
-            .and_then(|conds| conds.iter().find(|c| c.condition_type == "Ready"))
-            .map(|c| c.status == "True"),
-
-        taints: taints_str,
-        label: label_str,
-        annotation: annotation_str,
-
-        image_count: status.and_then(|s| s.images.as_ref().map(|imgs| imgs.len() as u32)),
-        image_names: status.and_then(|s| {
-            s.images.as_ref().map(|imgs| {
-                imgs.iter()
-                    .flat_map(|img| img.names.clone())
-                    .collect::<Vec<_>>()
-            })
-        }),
-        image_total_size_bytes: status.and_then(|s| {
-            s.images.as_ref().map(|imgs| {
-                imgs.iter()
-                    .map(|i| i.size_bytes.unwrap_or(0))
-                    .sum::<u64>()
-            })
-        }),
+        architecture,
+        os_image,
+        kernel_version,
+        kubelet_version,
+        container_runtime,
+        operating_system,
+        cpu_capacity_cores,
+        memory_capacity_bytes,
+        pod_capacity,
+        ephemeral_storage_capacity_bytes,
+        cpu_allocatable_cores,
+        memory_allocatable_bytes,
+        ephemeral_storage_allocatable_bytes,
+        pod_allocatable,
+        ready,
+        taints,
+        label,
+        annotation,
+        image_count,
+        image_names,
+        image_total_size_bytes,
+        ..Default::default()
     })
 }
 
@@ -208,5 +248,94 @@ fn parse_quantity_to_bytes(input: &str) -> Option<u64> {
         v.parse::<f64>().ok().map(|n| (n * 1024.0 * 1024.0 * 1024.0 * 1024.0) as u64)
     } else {
         input.parse::<u64>().ok()
+    }
+}
+
+/// Helper: Convert a Kubernetes Node object to InfoNodeEntity
+pub(crate) fn map_node_to_info_entity(node: &Node) -> InfoNodeEntity {
+    let node_info = node.status.as_ref().and_then(|s| s.node_info.as_ref());
+    let addresses = node.status.as_ref().and_then(|s| s.addresses.as_ref());
+
+    // Pick internal IP if available
+    let internal_ip = addresses
+        .and_then(|addrs| addrs.iter().find(|a| a.address_type == "InternalIP"))
+        .map(|a| a.address.clone());
+
+    InfoNodeEntity {
+        node_name: Some(node.metadata.name.clone()),
+        node_uid: node.metadata.uid.clone(),
+        creation_timestamp: node
+            .metadata
+            .creation_timestamp
+            .as_ref()
+            .and_then(|ts| ts.parse().ok()),
+
+        resource_version: node.metadata.resource_version.clone(),
+        last_updated_info_at: Some(Utc::now()),
+
+        hostname: node_info.and_then(|ni| ni.machine_id.clone()),
+        internal_ip,
+
+        architecture: node_info.and_then(|ni| ni.architecture.clone()),
+        os_image: node_info.and_then(|ni| ni.os_image.clone()),
+        kernel_version: node_info.and_then(|ni| ni.kernel_version.clone()),
+        kubelet_version: node_info.and_then(|ni| ni.kubelet_version.clone()),
+        container_runtime: node_info.and_then(|ni| ni.container_runtime_version.clone()),
+        operating_system: node_info.and_then(|ni| ni.operating_system.clone()),
+
+        // Capacity / allocatable
+        cpu_capacity_cores: node
+            .status
+            .as_ref()
+            .and_then(|s| s.capacity.as_ref())
+            .and_then(|c| c.get("cpu"))
+            .and_then(|v| v.parse::<u32>().ok()),
+
+        memory_capacity_bytes: node
+            .status
+            .as_ref()
+            .and_then(|s| s.capacity.as_ref())
+            .and_then(|c| c.get("memory"))
+            .and_then(|v| v.parse::<u64>().ok()),
+
+        pod_capacity: node
+            .status
+            .as_ref()
+            .and_then(|s| s.capacity.as_ref())
+            .and_then(|c| c.get("pods"))
+            .and_then(|v| v.parse::<u32>().ok()),
+
+        cpu_allocatable_cores: node
+            .status
+            .as_ref()
+            .and_then(|s| s.allocatable.as_ref())
+            .and_then(|c| c.get("cpu"))
+            .and_then(|v| v.parse::<u32>().ok()),
+
+        memory_allocatable_bytes: node
+            .status
+            .as_ref()
+            .and_then(|s| s.allocatable.as_ref())
+            .and_then(|c| c.get("memory"))
+            .and_then(|v| v.parse::<u64>().ok()),
+
+        // Misc
+        image_count: node.status.as_ref().and_then(|s| s.images.as_ref().map(|imgs| imgs.len() as u32)),
+        image_names: node.status.as_ref().and_then(|s| {
+            s.images.as_ref().map(|imgs| {
+                imgs.iter()
+                    .flat_map(|i| i.names.clone())
+                    .collect::<Vec<_>>()
+            })
+        }),
+        image_total_size_bytes: node.status.as_ref().and_then(|s| {
+            s.images.as_ref().map(|imgs| {
+                imgs.iter()
+                    .filter_map(|i| i.size_bytes)
+                    .sum::<u64>()
+            })
+        }),
+
+        ..Default::default()
     }
 }

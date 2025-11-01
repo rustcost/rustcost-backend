@@ -7,20 +7,21 @@ use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
+use std::io::BufWriter;
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
-use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
+use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
 
-/// Adapter for node minute-level metrics.
+/// Adapter for pod minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
-pub struct MetricNodeMinuteFsAdapter;
+pub struct MetricPodMinuteFsAdapter;
 
-impl MetricNodeMinuteFsAdapter {
-    fn build_path(&self, node: &str) -> String {
+impl MetricPodMinuteFsAdapter {
+    fn build_path(&self, pod_uid: &str) -> String {
         let month = Utc::now().format("%Y-%m").to_string();
-        format!("data/metrics/nodes/{node}/m/{month}.rcd")
+        format!("data/metrics/pods/{pod_uid}/m/{month}.rcd")
     }
 
-    fn parse_line(header: &[&str], line: &str) -> Option<NodeMetricsEntity> {
+    fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {
         let parts: Vec<&str> = line.split('|').collect();
         if parts.len() != header.len() {
             return None;
@@ -28,7 +29,7 @@ impl MetricNodeMinuteFsAdapter {
 
         // TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|... etc.
         let time = parts[0].parse::<DateTime<Utc>>().ok()?;
-        Some(NodeMetricsEntity {
+        Some(MetricPodEntity {
             time,
             cpu_usage_nano_cores: parts[1].parse().ok(),
             cpu_usage_core_nano_seconds: parts[2].parse().ok(),
@@ -49,7 +50,7 @@ impl MetricNodeMinuteFsAdapter {
 
     fn ensure_header(&self, path: &Path, file: &mut std::fs::File) -> Result<()> {
         if !path.exists() {
-            let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|FS_USED_BYTES|FS_CAPACITY_BYTES|FS_INODES_USED|FS_INODES\n";
+            let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|FS_USED_BYTES|FS_CAPACITY_BYTES|FS_IPODS_USED|FS_IPODS\n";
             file.write_all(header.as_bytes())?;
         }
         Ok(())
@@ -60,9 +61,9 @@ impl MetricNodeMinuteFsAdapter {
     }
 }
 
-impl MetricFsAdapterBase<NodeMetricsEntity> for MetricNodeMinuteFsAdapter {
-    fn append_row(&self, node: &str, dto: &NodeMetricsEntity) -> Result<()> {
-        let path_str = self.build_path(node);
+impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
+    fn append_row(&self, pod: &str, dto: &MetricPodEntity) -> Result<()> {
+        let path_str = self.build_path(pod);
         let path = Path::new(&path_str);
 
         if let Some(parent) = path.parent() {
@@ -70,11 +71,20 @@ impl MetricFsAdapterBase<NodeMetricsEntity> for MetricNodeMinuteFsAdapter {
         }
 
         // let new = !path.exists();
-        let mut file = OpenOptions::new().create(true).append(true).open(&path)?;
+
+        // ✅ open file and wrap in BufWriter
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)?;
+        let mut writer = BufWriter::new(file);
+
+        // Write header if file newly created
         // if new {
-        //     self.ensure_header(path, &mut file)?;
+        //     self.ensure_header(path, &mut writer)?;
         // }
 
+        // Format the row
         let row = format!(
             "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}\n",
             dto.time.to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
@@ -94,15 +104,19 @@ impl MetricFsAdapterBase<NodeMetricsEntity> for MetricNodeMinuteFsAdapter {
             Self::opt(dto.fs_inodes),
         );
 
-        file.write_all(row.as_bytes())?;
+        // ✅ write to buffer
+        writer.write_all(row.as_bytes())?;
+
+        // ✅ ensure everything flushed to disk
+        writer.flush()?;
         Ok(())
     }
 
-    fn cleanup_old(&self, node: &str, before: DateTime<Utc>) -> Result<()> {
+    fn cleanup_old(&self, pod_uid: &str, before: DateTime<Utc>) -> Result<()> {
         let cutoff_month = before.format("%Y-%m").to_string();
 
         let paths = [
-            format!("data/metrics/nodes/{node}/m/{cutoff_month}.rcd"),
+            format!("data/metrics/pods/{pod_uid}/m/{cutoff_month}.rcd"),
         ];
 
         for path in &paths {
@@ -121,7 +135,7 @@ impl MetricFsAdapterBase<NodeMetricsEntity> for MetricNodeMinuteFsAdapter {
         object_name: &str,
         limit: Option<usize>,
         offset: Option<usize>,
-    ) -> Result<Vec<NodeMetricsEntity>> {
+    ) -> Result<Vec<MetricPodEntity>> {
         let path = self.build_path(object_name);
         let path_obj = Path::new(&path);
         if !path_obj.exists() {
@@ -136,7 +150,7 @@ impl MetricFsAdapterBase<NodeMetricsEntity> for MetricNodeMinuteFsAdapter {
         let header_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
         let header: Vec<&str> = header_line.split('|').collect();
 
-        let mut data: Vec<NodeMetricsEntity> = vec![];
+        let mut data: Vec<MetricPodEntity> = vec![];
 
         for line in lines.flatten() {
             if let Some(row) = Self::parse_line(&header, &line) {
@@ -162,9 +176,9 @@ impl MetricFsAdapterBase<NodeMetricsEntity> for MetricNodeMinuteFsAdapter {
         object_name: &str,
         limit: Option<usize>,
         offset: Option<usize>,
-    ) -> Result<Vec<NodeMetricsEntity>> {
+    ) -> Result<Vec<MetricPodEntity>> {
         let rows = self.get_row_between(start, end, object_name, limit, offset)?;
-        let filtered: Vec<NodeMetricsEntity> = rows
+        let filtered: Vec<MetricPodEntity> = rows
             .into_iter()
             .map(|mut row| {
                 // Zero out all other columns except the one requested

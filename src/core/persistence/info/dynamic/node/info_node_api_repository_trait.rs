@@ -15,7 +15,7 @@ pub trait InfoNodeApiRepository: Send + Sync {
     }
 
     /// Updates node info for the given node name.
-    fn update(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
-        self.fs_adapter().update(node_name, data)
+    fn update(&self, data: &InfoNodeEntity) -> Result<()> {
+        self.fs_adapter().update(data)
     }
 }

@@ -10,18 +10,15 @@ use reqwest::Client;
 use tracing::{debug, error, info};
 use serde_json::to_string_pretty;
 use crate::core::kube_client::{api_server, build_client, read_token};
-use crate::scheduler::tasks::collectors::k8s::node::mapper::{map_node_to_info_dto, map_summary_to_metrics, map_summary_to_node_info};
+use crate::scheduler::tasks::collectors::k8s::node::mapper::{ map_summary_to_metrics, map_summary_to_node_info};
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
-use crate::scheduler::tasks::collectors::k8s::node::api::{fetch_node_summary, fetch_nodes};
-use crate::scheduler::tasks::collectors::k8s::node::task::{handle_node, update_node_infos};
+use crate::scheduler::tasks::collectors::k8s::node::client::{fetch_node_summary, fetch_nodes};
+use crate::scheduler::tasks::collectors::k8s::node::task::{handle_node, update_node_info};
+use crate::scheduler::tasks::collectors::k8s::pod::task::handle_pod;
 
 /// Collects node-level stats from the Kubelet `/stats/summary` endpoint.
 pub async fn run() -> Result<()> {
     debug!("Starting K8s node stats task...");
-    //
-    let mut updated_nodes = Vec::new();
-    let mut updated_pods = Vec::new();
-    let mut updated_containers = Vec::new();
 
     // --- Build client & token ---
     let token = read_token()?;
@@ -32,17 +29,19 @@ pub async fn run() -> Result<()> {
 
     // --- Step 2: For each node, call /proxy/stats/summary ---
     for node in node_list.items {
-        let node_name = node.metadata.name;
+        let node_name = node.metadata.name.clone();
 
         match fetch_node_summary(&token, &client, &node_name).await {
             Ok(summary) => {
                 match handle_summary(&summary).await {
                     Ok(result) => {
+
+                        // if new node
                         if let Some(name) = result.node_name {
-                            updated_nodes.push(name);
+                            update_node_info(node).await?;
                         }
-                        updated_pods.extend(result.updated_pods);
-                        updated_containers.extend(result.updated_containers);
+                        // new_pods.extend(result.updated_pods);
+                        // new_containers.extend(result.updated_containers);
                     }
                     Err(e) => error!("❌ Failed to handle summary for {}: {:?}", node_name, e),
                 }
@@ -52,18 +51,6 @@ pub async fn run() -> Result<()> {
             }
         }
     }
-
-    // --- Step 3
-    if !updated_nodes.is_empty() {
-        update_node_infos(&token, &client, &updated_nodes).await?;
-    }
-    // if !updated_pods.is_empty() {
-    //     update_pod_infos(&token, &client, &updated_pods).await?;
-    // }
-    // if !updated_containers.is_empty() {
-    //     update_container_infos(&token, &client, &updated_containers).await?;
-    // }
-
     Ok(())
 }
 
@@ -82,6 +69,8 @@ pub async fn handle_summary(summary: &Summary) -> Result<SummaryHandleResultDto>
     if handle_node(summary).await? {
         result.node_name = Some(summary.node.node_name.clone());
     }
+
+    handle_pod(summary).await?;
 
     // result.updated_pods = pod::handle_pod(summary).await?;
     // result.updated_containers = container::handle_container(summary).await?;

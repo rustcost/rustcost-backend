@@ -75,14 +75,29 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
     }
 
     /// Creates the node info file.
-    fn insert(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
+    fn insert(&self, data: &InfoNodeEntity) -> Result<()> {
+        // Safely get the node name or return an error if missing
+        let node_name = data
+            .node_name
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing node_name in InfoNodeEntity"))?;
+
         Self::create_node_dir_if_missing(node_name)?;
         self.write(node_name, data)
     }
 
     /// Updates the node info file.
-    fn update(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
+    fn update(&self, data: &InfoNodeEntity) -> Result<()> {
+        // Safely get the node name or return an error if missing
+        let node_name = data
+            .node_name
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing node_name in InfoNodeEntity"))?;
+
+        // Create directory if missing
         Self::create_node_dir_if_missing(node_name)?;
+
+        // Write node info
         self.write(node_name, data)
     }
 
