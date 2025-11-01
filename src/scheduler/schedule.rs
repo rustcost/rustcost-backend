@@ -5,6 +5,7 @@ use chrono::{Timelike, Utc};
 use tokio::sync::broadcast;
 use tokio::time::{interval, sleep, Duration, MissedTickBehavior};
 use tracing::{debug, error, info, warn};
+use chrono::{Duration as ChronoDuration};
 
 /// Entry point — start all periodic background tasks.
 /// Call this once from your main() function.
@@ -39,9 +40,10 @@ pub async fn run_minute_loop(shutdown: &mut broadcast::Receiver<()>) {
     }
 }
 
-/// Runs every aligned hour (e.g., 01:00:00, 02:00:00 …)
-async fn run_hour_loop(shutdown: &mut broadcast::Receiver<()>) {
-    align_to_next_hour().await;
+/// Runs an hourly loop that fires at HH:00:30 each hour (e.g., 01:00:30, 02:00:30 …)
+pub async fn run_hour_loop(shutdown: &mut broadcast::Receiver<()>) {
+    align_to_next_hour_plus_30s().await;
+
     let mut ticker = interval(Duration::from_secs(3600));
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
@@ -60,10 +62,11 @@ async fn run_hour_loop(shutdown: &mut broadcast::Receiver<()>) {
     }
 }
 
-/// Runs daily at 00:00 UTC (midnight)
-async fn run_day_loop(shutdown: &mut broadcast::Receiver<()>) {
-    align_to_next_midnight().await;
-    let mut ticker = interval(Duration::from_secs(86_400));
+/// Runs daily at 00:30:30 UTC.
+pub async fn run_day_loop(shutdown: &mut broadcast::Receiver<()>) {
+    align_to_next_midnight_plus_30m30s().await;
+
+    let mut ticker = interval(Duration::from_secs(86_400)); // 24h
     ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
     loop {
@@ -101,12 +104,50 @@ async fn align_to_next_hour() {
     sleep(Duration::from_secs(secs_until_next_hour)).await;
 }
 
-async fn align_to_next_midnight() {
+/// Aligns to next full hour + 30 seconds
+async fn align_to_next_hour_plus_30s() {
     let now = Utc::now();
-    let secs_until_next_day =
-        24 * 3600 - (now.hour() as u64 * 3600 + now.minute() as u64 * 60 + now.second() as u64);
-    info!(wait_sec = secs_until_next_day, "Aligning to midnight");
-    sleep(Duration::from_secs(secs_until_next_day)).await;
+    let next_hour = now
+        .with_minute(0)
+        .and_then(|t| t.with_second(30))
+        .and_then(|t| t.with_nanosecond(0))
+        .map(|t| {
+            if t > now {
+                t
+            } else {
+                // if already past HH:00:30 this hour, jump to next hour + 30s
+                t + chrono::Duration::hours(1)
+            }
+        })
+        .unwrap();
+
+    let wait = (next_hour - now).to_std().unwrap_or(Duration::from_secs(0));
+    info!("Aligning hour job: sleeping {:?} until {}", wait, next_hour);
+    sleep(wait).await;
+}
+
+/// Sleeps until the next 00:30:30 UTC moment.
+async fn align_to_next_midnight_plus_30m30s() {
+    let now = Utc::now();
+
+    // Build today's 00:30:30
+    let today_target = now
+        .with_hour(0)
+        .and_then(|t| t.with_minute(30))
+        .and_then(|t| t.with_second(30))
+        .and_then(|t| t.with_nanosecond(0))
+        .unwrap();
+
+    // If already past today's 00:30:30, use tomorrow's
+    let target = if now < today_target {
+        today_target
+    } else {
+        today_target + ChronoDuration::days(1)
+    };
+
+    let wait = (target - now).to_std().unwrap_or(Duration::from_secs(0));
+    info!("Aligning day job: sleeping {:?} until {}", wait, target);
+    sleep(wait).await;
 }
 
 //
