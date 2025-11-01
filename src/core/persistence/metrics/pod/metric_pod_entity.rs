@@ -21,9 +21,15 @@ pub struct MetricPodEntity {
     pub network_physical_rx_errors: Option<u64>,
     pub network_physical_tx_errors: Option<u64>,
 
-    // Filesystem
-    pub fs_used_bytes: Option<u64>,
-    pub fs_capacity_bytes: Option<u64>,
-    pub fs_inodes_used: Option<u64>,
-    pub fs_inodes: Option<u64>,
+    // ephemeral storage usage
+    pub es_used_bytes: Option<u64>,
+    pub es_capacity_bytes: Option<u64>,
+    pub es_inodes_used: Option<u64>,
+    pub es_inodes: Option<u64>,
+
+    // persistent storage usage
+    pub pv_used_bytes: Option<u64>,
+    pub pv_capacity_bytes: Option<u64>,
+    pub pv_inodes_used: Option<u64>,
+    pub pv_inodes: Option<u64>,
 }

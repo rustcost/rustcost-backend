@@ -41,20 +41,25 @@ impl MetricPodMinuteFsAdapter {
             network_physical_tx_bytes: parts[8].parse().ok(),
             network_physical_rx_errors: parts[9].parse().ok(),
             network_physical_tx_errors: parts[10].parse().ok(),
-            fs_used_bytes: parts[11].parse().ok(),
-            fs_capacity_bytes: parts[12].parse().ok(),
-            fs_inodes_used: parts[13].parse().ok(),
-            fs_inodes: parts[14].parse().ok(),
+            es_used_bytes: parts[11].parse().ok(),
+            es_capacity_bytes: parts[12].parse().ok(),
+            es_inodes_used: parts[13].parse().ok(),
+            es_inodes: parts[14].parse().ok(),
+            pv_used_bytes: parts[15].parse().ok(),
+            pv_capacity_bytes: parts[16].parse().ok(),
+            pv_inodes_used: parts[17].parse().ok(),
+            pv_inodes: parts[18].parse().ok(),
         })
     }
 
     fn ensure_header(&self, path: &Path, file: &mut std::fs::File) -> Result<()> {
-        if !path.exists() {
-            let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|FS_USED_BYTES|FS_CAPACITY_BYTES|FS_IPODS_USED|FS_IPODS\n";
+        if file.metadata()?.len() == 0 {
+            let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|ES_USED_BYTES|ES_CAPACITY_BYTES|ES_INODES_USED|ES_INODES|PV_USED_BYTES|PV_CAPACITY_BYTES|PV_INODES_USED|PV_INODES\n";
             file.write_all(header.as_bytes())?;
         }
         Ok(())
     }
+
 
     fn opt(v: Option<u64>) -> String {
         v.map(|x| x.to_string()).unwrap_or_default()
@@ -86,7 +91,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
 
         // Format the row
         let row = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}\n",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}\n",
             dto.time.to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
             Self::opt(dto.cpu_usage_nano_cores),
             Self::opt(dto.cpu_usage_core_nano_seconds),
@@ -98,11 +103,16 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
             Self::opt(dto.network_physical_tx_bytes),
             Self::opt(dto.network_physical_rx_errors),
             Self::opt(dto.network_physical_tx_errors),
-            Self::opt(dto.fs_used_bytes),
-            Self::opt(dto.fs_capacity_bytes),
-            Self::opt(dto.fs_inodes_used),
-            Self::opt(dto.fs_inodes),
+            Self::opt(dto.es_used_bytes),
+            Self::opt(dto.es_capacity_bytes),
+            Self::opt(dto.es_inodes_used),
+            Self::opt(dto.es_inodes),
+            Self::opt(dto.pv_used_bytes),
+            Self::opt(dto.pv_capacity_bytes),
+            Self::opt(dto.pv_inodes_used),
+            Self::opt(dto.pv_inodes),
         );
+
 
         // ✅ write to buffer
         writer.write_all(row.as_bytes())?;
