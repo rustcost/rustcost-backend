@@ -7,6 +7,7 @@ use anyhow::Result;
 use std::fs;
 use std::process::Command;
 use tracing::{debug, error, info};
+use crate::scheduler::tasks::collectors::k8s::container::task::handle_container;
 
 /// Collects node-level stats from the Kubelet `/stats/summary` endpoint.
 pub async fn run() -> Result<()> {
@@ -63,9 +64,7 @@ pub async fn handle_summary(summary: &Summary) -> Result<SummaryHandleResultDto>
     }
 
     handle_pod(summary).await?;
-
-    // result.updated_pods = pod::handle_pod(summary).await?;
-    // result.updated_containers = container::handle_container(summary).await?;
+    handle_container(summary).await?;
 
     Ok(result)
 }
