@@ -37,9 +37,11 @@ async fn run_server(app_config: &crate::config::Config) {
     let app = app_router();
     let address = format!("{}:{}", app_config.server_host(), app_config.server_port());
     let socket_addr: SocketAddr = address.parse().expect("Invalid socket address");
-    let debug_mode = std::env::var("DEBUG_MODE").is_ok();
+    let debug_mode = std::env::var("DEBUG_MODE")
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
 
-    tracing::info!("🚀 Listening on http://{}", socket_addr);
+    info!("🚀 Listening on http://{}", socket_addr);
 
     let listener = tokio::net::TcpListener::bind(socket_addr)
         .await
