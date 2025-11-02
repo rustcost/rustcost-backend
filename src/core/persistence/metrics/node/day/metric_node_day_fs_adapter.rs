@@ -10,16 +10,16 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
-use crate::core::persistence::metrics::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
+use crate::core::persistence::metrics::node::hour::metric_node_hour_fs_adapter::MetricNodeHourFsAdapter;
 
-/// Adapter for node minute-level metrics.
-/// Responsible for appending minute samples to the filesystem and cleaning up old data.
-pub struct MetricNodeHourFsAdapter;
+/// Adapter for node hour-level metrics.
+/// Responsible for appending hour samples to the filesystem and cleaning up old data.
+pub struct MetricNodeDayFsAdapter;
 
-impl MetricNodeHourFsAdapter {
-    fn build_path(&self, node_name: &str) -> String {
-        let month = Utc::now().format("%Y-%m").to_string();
-        format!("data/metrics/nodes/{node_name}/h/{month}.rcd")
+impl MetricNodeDayFsAdapter {
+    fn build_path(&self, node_key: &str) -> String {
+        let year = Utc::now().format("%Y").to_string();
+        format!("data/metrics/nodes/{node_key}/d/{year}.rcd")
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricNodeEntity> {
@@ -63,7 +63,7 @@ impl MetricNodeHourFsAdapter {
     }
 }
 
-impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
+impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeDayFsAdapter {
     fn append_row(&self, node: &str, dto: &MetricNodeEntity) -> Result<()> {
         let path_str = self.build_path(node);
         let path = Path::new(&path_str);
@@ -115,19 +115,19 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
         Ok(())
     }
 
-    /// Aggregate minute-level metrics into an hourly sample and append to hour file.
+    /// Aggregate hour-level metrics into an dayly sample and append to day file.
     fn append_row_aggregated(
         &self,
         node_uid: &str,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<()> {
-        // --- 1️⃣ Load minute data
-        let minute_adapter = MetricNodeMinuteFsAdapter;
-        let rows = minute_adapter.get_row_between(start, end, node_uid, None, None)?;
+        // --- 1️⃣ Load hour data
+        let hour_adapter = MetricNodeHourFsAdapter;
+        let rows = hour_adapter.get_row_between(start, end, node_uid, None, None)?;
 
         if rows.is_empty() {
-            return Err(anyhow!("no minute data found for aggregation"));
+            return Err(anyhow!("no hour data found for aggregation"));
         }
 
         // --- 2️⃣ Compute aggregates
@@ -177,18 +177,19 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
             fs_inodes: last.fs_inodes,
         };
 
-        // --- 3️⃣ Append the aggregated row into the hour-level file
+        // --- 3️⃣ Append the aggregated row into the day-level file
         self.append_row(node_uid, &aggregated)?;
 
         Ok(())
     }
 
 
-    fn cleanup_old(&self, node_name: &str, before: DateTime<Utc>) -> Result<()> {
-        let cutoff_month = before.format("%Y-%m").to_string();
+
+    fn cleanup_old(&self, node_uid: &str, before: DateTime<Utc>) -> Result<()> {
+        let cutoff_month = before.format("%Y").to_string();
 
         let paths = [
-            format!("data/metrics/nodes/{node_name}/h/{cutoff_month}.rcd"),
+            format!("data/metrics/nodes/{node_uid}/d/{cutoff_month}.rcd"),
         ];
 
         for path in &paths {
@@ -198,6 +199,40 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
         }
 
         Ok(())
+    }
+
+    fn get_column_between(
+        &self,
+        column_name: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        object_name: &str,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> Result<Vec<MetricNodeEntity>> {
+        let rows = self.get_row_between(start, end, object_name, limit, offset)?;
+        let filtered: Vec<MetricNodeEntity> = rows
+            .into_iter()
+            .map(|mut row| {
+                // Zero out all other columns except the one requested
+                match column_name {
+                    "CPU_USAGE_NANO_CORES" => {
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        // ... set others to None as needed
+                    }
+                    "MEMORY_USAGE_BYTES" => {
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        // ... etc.
+                    }
+                    _ => {}
+                }
+                row
+            })
+            .collect();
+
+        Ok(filtered)
     }
 
     fn get_row_between(
@@ -238,39 +273,5 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
         let slice = data.into_iter().skip(start_idx).take(end_idx - start_idx).collect();
 
         Ok(slice)
-    }
-
-    fn get_column_between(
-        &self,
-        column_name: &str,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
-        object_name: &str,
-        limit: Option<usize>,
-        offset: Option<usize>,
-    ) -> Result<Vec<MetricNodeEntity>> {
-        let rows = self.get_row_between(start, end, object_name, limit, offset)?;
-        let filtered: Vec<MetricNodeEntity> = rows
-            .into_iter()
-            .map(|mut row| {
-                // Zero out all other columns except the one requested
-                match column_name {
-                    "CPU_USAGE_NANO_CORES" => {
-                        row.cpu_usage_core_nano_seconds = None;
-                        row.memory_usage_bytes = None;
-                        // ... set others to None as needed
-                    }
-                    "MEMORY_USAGE_BYTES" => {
-                        row.cpu_usage_nano_cores = None;
-                        row.cpu_usage_core_nano_seconds = None;
-                        // ... etc.
-                    }
-                    _ => {}
-                }
-                row
-            })
-            .collect();
-
-        Ok(filtered)
     }
 }

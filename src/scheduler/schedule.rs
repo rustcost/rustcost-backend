@@ -66,7 +66,7 @@ pub async fn run_hour_loop(shutdown: &mut broadcast::Receiver<()>) {
     }
 }
 
-/// Runs daily at 00:30:30 UTC.
+/// Runs day at 00:30:30 UTC.
 pub async fn run_day_loop(shutdown: &mut broadcast::Receiver<()>) {
     align_to_next_midnight_plus_30m30s().await;
 

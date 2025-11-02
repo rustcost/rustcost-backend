@@ -1,2 +1,2 @@
-pub mod write;
-mod metric_node_day_collector_fs_adapter;
+pub mod metric_node_day_fs_adapter;
+pub mod metric_node_day_processor_repository_trait;

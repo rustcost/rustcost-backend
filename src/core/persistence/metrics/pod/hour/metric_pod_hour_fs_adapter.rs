@@ -202,7 +202,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodHourFsAdapter {
         let cutoff_month = before.format("%Y-%m").to_string();
 
         let paths = [
-            format!("data/metrics/pods/{pod_uid}/m/{cutoff_month}.rcd"),
+            format!("data/metrics/pods/{pod_uid}/h/{cutoff_month}.rcd"),
         ];
 
         for path in &paths {
