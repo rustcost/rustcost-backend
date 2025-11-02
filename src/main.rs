@@ -15,8 +15,9 @@ pub mod core;
 use crate::config::config;
 // &'fixed Config
 use crate::routes::app_router;
-use crate::scheduler::schedule::{run_hour_loop, run_minute_loop};
+use crate::scheduler::schedule::{run_day_loop, run_hour_loop, run_minute_loop};
 use crate::scheduler::scheduler_start_all_tasks;
+use tracing::{info, error};
 
 // --- Entry Point ---
 #[tokio::main]
@@ -44,20 +45,44 @@ async fn run_server(app_config: &crate::config::Config) {
         .await
         .expect("Failed to bind");
 
-
+    // Keep the sender ALIVE for whole function lifetime
+    let (shutdown_tx, mut shutdown_rx) = broadcast::channel::<()>(16);
 
     if debug_mode {
-        // run_minute_loop(&mut tokio::sync::broadcast::channel::<()>(1).1).await;
-        // run_hour_loop(&mut tokio::sync::broadcast::channel::<()>(5).1).await;
+        let sched_rx = shutdown_rx.resubscribe();
+        // run_minute_loop(&mut broadcast::channel::<()>(1).1).await;
+        // run_hour_loop(&mut broadcast::channel::<()>(5).1).await;
+        run_day_loop(&mut broadcast::channel::<()>(5).1).await;
     } else {
-        let (_shutdown_tx, shutdown_rx) = broadcast::channel::<()>(16);
-        scheduler_start_all_tasks(shutdown_rx).await;
+        // Run the scheduler as a background task that blocks until it receives shutdown
+        let sched_rx = shutdown_rx.resubscribe();
+        tokio::spawn(async move {
+            scheduler_start_all_tasks(sched_rx).await;
+        });
     }
 
 
 
+    // Graceful shutdown: Ctrl+C => send shutdown => server stops
+    let shutdown_tx_clone = shutdown_tx.clone();
+    let server = axum::serve(listener, app)
+        .with_graceful_shutdown(async move {
+            // Wait for Ctrl+C
+            let _ = tokio::signal::ctrl_c().await;
+            info!("🔻 Ctrl+C received, sending shutdown...");
+            let _ = shutdown_tx_clone.send(());
+        });
 
-    axum::serve(listener, app)
-        .await
-        .expect("Server failed to run");
+    // Also listen for a shutdown message to finish this function if needed
+    tokio::select! {
+        result = server => {
+            if let Err(e) = result {
+                error!(?e, "Server failed");
+            }
+        }
+        _ = shutdown_rx.recv() => {
+            info!("🔻 Shutdown received; exiting run_server");
+        }
+    }
+
 }

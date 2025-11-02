@@ -9,7 +9,9 @@ use chrono::{Duration as ChronoDuration};
 
 /// Entry point — start all periodic background tasks.
 /// Call this once from your main() function.
-pub async fn start_all_tasks(shutdown: broadcast::Receiver<()>) {
+pub async fn scheduler_start_all_tasks(mut shutdown: broadcast::Receiver<()>) {
+    info!("Starting scheduler tasks...");
+
     let mut s1 = shutdown.resubscribe();
     let mut s2 = shutdown.resubscribe();
     let mut s3 = shutdown.resubscribe();
@@ -17,8 +19,10 @@ pub async fn start_all_tasks(shutdown: broadcast::Receiver<()>) {
     tokio::spawn(async move { run_minute_loop(&mut s1).await });
     tokio::spawn(async move { run_hour_loop(&mut s2).await });
     tokio::spawn(async move { run_day_loop(&mut s3).await });
-}
 
+    // Keep the function alive until shutdown signal is received
+    let _ = shutdown.recv().await;
+}
 /// Runs every aligned minute (e.g., 12:00:00, 12:01:00 …)
 pub async fn run_minute_loop(shutdown: &mut broadcast::Receiver<()>) {
     align_to_next_minute().await;
