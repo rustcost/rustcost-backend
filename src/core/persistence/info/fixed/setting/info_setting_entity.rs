@@ -19,7 +19,14 @@ pub struct InfoSettingEntity {
     pub language: String,
 
     /// Number of months to retain metric data before applying retention policy.
-    pub retention_month: u32,
+    /// Minute data (files named YYYY-MM-DD)
+    pub minute_retention_days: u32,
+
+    /// Hour data (files named YYYY-MM)
+    pub hour_retention_months: u32,
+
+    /// Day data (files named YYYY)
+    pub day_retention_years: u32,
 
     /// Retention behavior: `"delete"` or `"archive"`.
     pub retention_policy: String,
@@ -102,7 +109,9 @@ impl Default for InfoSettingEntity {
             // --- General & UI ---
             is_dark_mode: false,
             language: "en".into(),
-            retention_month: 6,
+            minute_retention_days: 7,
+            hour_retention_months: 12,
+            day_retention_years: 30,
             retention_policy: "delete".into(),
 
             // --- Persistence ---

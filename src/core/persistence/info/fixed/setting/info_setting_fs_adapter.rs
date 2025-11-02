@@ -40,8 +40,10 @@ impl InfoFixedFsAdapterTrait<InfoSettingEntity> for InfoSettingFsAdapter {
                     // === General & UI ===
                     "IS_DARK_MODE" => s.is_dark_mode = val.eq_ignore_ascii_case("true"),
                     "LANGUAGE" => s.language = val.to_string(),
-                    "RETENTION_MONTH" => s.retention_month = val.parse().unwrap_or(s.retention_month),
-                    "RETENTION_POLICY" => s.retention_policy = val.to_string(),
+
+                    "MINUTE_RETENTION_DAY" => s.minute_retention_days = val.parse().unwrap_or(s.minute_retention_days),
+                    "HOUR_RETENTION_MONTH" => s.hour_retention_months = val.parse().unwrap_or(s.hour_retention_months),
+                    "DAY_RETENTION_YEAR" => s.day_retention_years = val.parse().unwrap_or(s.day_retention_years),                    "RETENTION_POLICY" => s.retention_policy = val.to_string(),
 
                     // === TSDB Options ===
                     "ENABLE_LINE_NUM_TRACKING" => s.enable_line_num_tracking = val.eq_ignore_ascii_case("true"),
@@ -124,7 +126,9 @@ impl InfoSettingFsAdapter {
 
         writeln!(f, "IS_DARK_MODE:{}", data.is_dark_mode)?;
         writeln!(f, "LANGUAGE:{}", data.language)?;
-        writeln!(f, "RETENTION_MONTH:{}", data.retention_month)?;
+        writeln!(f, "MINUTE_RETENTION_DAY:{}", data.minute_retention_days)?;
+        writeln!(f, "HOUR_RETENTION_MONTH:{}", data.hour_retention_months)?;
+        writeln!(f, "DAY_RETENTION_YEAR:{}", data.day_retention_years)?;
         writeln!(f, "RETENTION_POLICY:{}", data.retention_policy)?;
         writeln!(f, "ENABLE_LINE_NUM_TRACKING:{}", data.enable_line_num_tracking)?;
         writeln!(f, "ENABLE_INDEX_FILE:{}", data.enable_index_file)?;
