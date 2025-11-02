@@ -1,3 +1,3 @@
 pub mod retention;
-pub mod hourly;
+pub mod hour;
 pub mod day;

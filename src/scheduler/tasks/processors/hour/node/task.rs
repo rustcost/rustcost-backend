@@ -8,13 +8,13 @@ use crate::core::persistence::metrics::node::hour::{
     metric_node_hour_fs_adapter::MetricNodeHourFsAdapter,
     metric_node_hour_processor_repository_trait::MetricNodeHourProcessorRepository,
 };
-use crate::scheduler::tasks::processors::hourly::node::metric_node_hour_processor_repository::MetricNodeHourProcessorRepositoryImpl;
+use crate::scheduler::tasks::processors::hour::node::metric_node_hour_processor_repository::MetricNodeHourProcessorRepositoryImpl;
 use tracing::{debug, error};
 
-/// Aggregates all nodes’ minute-level metrics into hourly metrics.
+/// Aggregates all nodes’ minute-level metrics into hour metrics.
 ///
 /// This scans `data/metrics/nodes/{node_name}/` and calls `append_row_aggregated()`
-/// for each node directory, generating an hourly summary.
+/// for each node directory, generating an hour summary.
 pub async fn process_node_minute_to_hour() -> Result<()> {
     let (start, end) = previous_hour_window()?;
     let base_dir = Path::new("data/metrics/nodes/");
@@ -67,7 +67,7 @@ fn collect_node_names(base_dir: &Path) -> Result<Vec<String>> {
     Ok(node_names)
 }
 
-/// Aggregates minute-level data into hourly data for all given nodes.
+/// Aggregates minute-level data into hour data for all given nodes.
 fn process_all_nodes<R: MetricNodeHourProcessorRepository>(
     repo: &R,
     node_names: &[String],

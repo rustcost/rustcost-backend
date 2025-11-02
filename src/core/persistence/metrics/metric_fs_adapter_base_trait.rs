@@ -12,7 +12,7 @@ pub trait MetricFsAdapterBase<T>: Send + Sync {
     }
 
     // === Processor-like ===
-    /// Append aggregated metrics (e.g. hourly, day)
+    /// Append aggregated metrics (e.g. hour, day)
     #[allow(unused_variables)]
     fn append_row_aggregated(&self, pod_uid: &str, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<()> {
         unimplemented!("append_row_aggregated not used in this adapter")

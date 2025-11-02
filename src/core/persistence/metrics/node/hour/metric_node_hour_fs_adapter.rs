@@ -115,7 +115,7 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
         Ok(())
     }
 
-    /// Aggregate minute-level metrics into an hourly sample and append to hour file.
+    /// Aggregate minute-level metrics into an hour sample and append to hour file.
     fn append_row_aggregated(
         &self,
         node_uid: &str,

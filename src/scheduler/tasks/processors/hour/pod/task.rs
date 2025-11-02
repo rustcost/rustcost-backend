@@ -8,13 +8,13 @@ use crate::core::persistence::metrics::pod::hour::{
     metric_pod_hour_fs_adapter::MetricPodHourFsAdapter,
     metric_pod_hour_processor_repository_trait::MetricPodHourProcessorRepository,
 };
-use crate::scheduler::tasks::processors::hourly::pod::metric_pod_hour_processor_repository::MetricPodHourProcessorRepositoryImpl;
+use crate::scheduler::tasks::processors::hour::pod::metric_pod_hour_processor_repository::MetricPodHourProcessorRepositoryImpl;
 use tracing::{debug, error};
 
-/// Aggregates all pods’ minute-level metrics into hourly metrics.
+/// Aggregates all pods’ minute-level metrics into hour metrics.
 ///
 /// This scans `data/metrics/pods/{pod_uid}/` and calls `append_row_aggregated()`
-/// for each pod directory, generating an hourly summary.
+/// for each pod directory, generating an hour summary.
 pub async fn process_pod_minute_to_hour() -> Result<()> {
     let (start, end) = previous_hour_window()?;
     let base_dir = Path::new("data/metrics/pods/");
@@ -67,7 +67,7 @@ fn collect_pod_uids(base_dir: &Path) -> Result<Vec<String>> {
     Ok(pod_uids)
 }
 
-/// Aggregates minute-level data into hourly data for all given pods.
+/// Aggregates minute-level data into hour data for all given pods.
 fn process_all_pods<R: MetricPodHourProcessorRepository>(
     repo: &R,
     pod_uids: &[String],

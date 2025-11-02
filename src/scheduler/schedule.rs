@@ -44,7 +44,7 @@ pub async fn run_minute_loop(shutdown: &mut broadcast::Receiver<()>) {
     }
 }
 
-/// Runs an hourly loop that fires at HH:00:30 each hour (e.g., 01:00:30, 02:00:30 …)
+/// Runs an hour loop that fires at HH:00:30 each hour (e.g., 01:00:30, 02:00:30 …)
 pub async fn run_hour_loop(shutdown: &mut broadcast::Receiver<()>) {
     align_to_next_hour_plus_30s().await;
 

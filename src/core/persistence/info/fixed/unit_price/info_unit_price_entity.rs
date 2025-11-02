@@ -46,7 +46,7 @@ pub struct InfoUnitPriceEntity {
 impl Default for InfoUnitPriceEntity {
     fn default() -> Self {
         Self {
-            cpu_core_hour: 0.031 / (30.0 * 24.0),         // Convert rough monthly → hourly
+            cpu_core_hour: 0.031 / (30.0 * 24.0),         // Convert rough monthly → hour
             cpu_spot_core_hour: 0.006 / (30.0 * 24.0),
             memory_gb_hour: 0.004 / (30.0 * 24.0),
             memory_spot_gb_hour: 0.001 / (30.0 * 24.0),

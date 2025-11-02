@@ -8,13 +8,13 @@ use crate::core::persistence::metrics::container::hour::{
     metric_container_hour_fs_adapter::MetricContainerHourFsAdapter,
     metric_container_hour_processor_repository_trait::MetricContainerHourProcessorRepository,
 };
-use crate::scheduler::tasks::processors::hourly::container::metric_container_hour_processor_repository::MetricContainerHourProcessorRepositoryImpl;
+use crate::scheduler::tasks::processors::hour::container::metric_container_hour_processor_repository::MetricContainerHourProcessorRepositoryImpl;
 use tracing::{debug, error};
 
-/// Aggregates all containers’ minute-level metrics into hourly metrics.
+/// Aggregates all containers’ minute-level metrics into hour metrics.
 ///
 /// This scans `data/metrics/containers/{container_key}/` and calls `append_row_aggregated()`
-/// for each container directory, generating an hourly summary.
+/// for each container directory, generating an hour summary.
 pub async fn process_container_minute_to_hour() -> Result<()> {
     let (start, end) = previous_hour_window()?;
     let base_dir = Path::new("data/metrics/containers/");
@@ -67,7 +67,7 @@ fn collect_container_keys(base_dir: &Path) -> Result<Vec<String>> {
     Ok(container_keys)
 }
 
-/// Aggregates minute-level data into hourly data for all given containers.
+/// Aggregates minute-level data into hour data for all given containers.
 fn process_all_containers<R: MetricContainerHourProcessorRepository>(
     repo: &R,
     container_keys: &[String],

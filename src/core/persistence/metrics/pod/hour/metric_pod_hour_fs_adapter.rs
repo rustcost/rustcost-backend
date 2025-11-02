@@ -123,7 +123,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodHourFsAdapter {
         Ok(())
     }
 
-    /// Aggregate minute-level metrics into an hourly sample and append to hour file.
+    /// Aggregate minute-level metrics into an hour sample and append to hour file.
     fn append_row_aggregated(
         &self,
         pod_uid: &str,
