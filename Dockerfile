@@ -10,25 +10,23 @@ FROM rust:${RUST_VERSION}-slim-bullseye AS build
 ARG APP_NAME
 WORKDIR /app
 
-# Install dependencies for building with Postgres (Diesel/SQLx)
+# Install minimal build dependencies (openssl optional, remove if not used)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libpq-dev pkg-config libssl-dev ca-certificates && \
+        pkg-config libssl-dev ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Build the application
-# Use build cache mounts for Cargo registry & target
+# Use build cache mounts for Cargo registry & target for faster rebuilds
 RUN --mount=type=bind,source=src,target=src \
     --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
     --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
-    --mount=type=bind,source=migrations,target=migrations \
     --mount=type=cache,target=/app/target \
     --mount=type=cache,target=/usr/local/cargo/registry \
     /bin/sh -c "\
         set -e && \
         cargo build --locked --release && \
         mkdir -p /out && \
-        cp /app/target/release/${APP_NAME} /out/rustcost \
+        cp /app/target/release/${APP_NAME} /out/${APP_NAME} \
     "
 
 ################################################################################
@@ -37,11 +35,12 @@ RUN --mount=type=bind,source=src,target=src \
 FROM debian:bullseye-slim AS final
 
 ARG UID=10001
+ARG APP_NAME=rustcost
 WORKDIR /app
 
-# Install runtime dependencies for Postgres client libraries
+# Install minimal runtime dependencies (e.g., SSL certs if using HTTPS)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq5 ca-certificates && \
+    apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
 # Add non-root user
@@ -55,12 +54,12 @@ RUN adduser \
     appuser
 USER appuser
 
-# Copy the binary and migrations from builder
-COPY --from=build /out/rustcost /usr/local/bin/rustcost
+# Copy the compiled binary from the build stage
+COPY --from=build /out/${APP_NAME} /usr/local/bin/${APP_NAME}
 
 # Expose API port
 EXPOSE 3000
 
-# Default entrypoint (can be overridden by Helm chart for migrations)
+# Default entrypoint
 ENTRYPOINT ["rustcost"]
 CMD ["serve"]
