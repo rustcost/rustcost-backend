@@ -1,0 +1,4 @@
+pub mod info_unit_price_entity;
+pub mod info_unit_price_fs_adapter;
+pub mod info_unit_price_collector_repository_trait;
+pub mod info_unit_price_api_repository_trait;
