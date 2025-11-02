@@ -1,7 +1,7 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
-use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
+use crate::core::persistence::metrics::node::metric_node_entity::MetricNodeEntity;
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use std::io::BufWriter;
 use std::{
     fs::File,
@@ -10,18 +10,19 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
+use crate::core::persistence::metrics::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
 
-/// Adapter for pod minute-level metrics.
+/// Adapter for node minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
-pub struct MetricPodMinuteFsAdapter;
+pub struct MetricNodeHourFsAdapter;
 
-impl MetricPodMinuteFsAdapter {
-    fn build_path(&self, pod_uid: &str) -> String {
-        let date = Utc::now().format("%Y-%m-%d").to_string();
-        format!("data/metrics/pods/{pod_uid}/m/{date}.rcd")
+impl MetricNodeHourFsAdapter {
+    fn build_path(&self, node_name: &str) -> String {
+        let month = Utc::now().format("%Y-%m").to_string();
+        format!("data/metrics/nodes/{node_name}/h/{month}.rcd")
     }
 
-    fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {
+    fn parse_line(header: &[&str], line: &str) -> Option<MetricNodeEntity> {
         let parts: Vec<&str> = line.split('|').collect();
         if parts.len() != header.len() {
             return None;
@@ -29,7 +30,7 @@ impl MetricPodMinuteFsAdapter {
 
         // TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|... etc.
         let time = parts[0].parse::<DateTime<Utc>>().ok()?;
-        Some(MetricPodEntity {
+        Some(MetricNodeEntity {
             time,
             cpu_usage_nano_cores: parts[1].parse().ok(),
             cpu_usage_core_nano_seconds: parts[2].parse().ok(),
@@ -41,18 +42,14 @@ impl MetricPodMinuteFsAdapter {
             network_physical_tx_bytes: parts[8].parse().ok(),
             network_physical_rx_errors: parts[9].parse().ok(),
             network_physical_tx_errors: parts[10].parse().ok(),
-            es_used_bytes: parts[11].parse().ok(),
-            es_capacity_bytes: parts[12].parse().ok(),
-            es_inodes_used: parts[13].parse().ok(),
-            es_inodes: parts[14].parse().ok(),
-            pv_used_bytes: parts[15].parse().ok(),
-            pv_capacity_bytes: parts[16].parse().ok(),
-            pv_inodes_used: parts[17].parse().ok(),
-            pv_inodes: parts[18].parse().ok(),
+            fs_used_bytes: parts[11].parse().ok(),
+            fs_capacity_bytes: parts[12].parse().ok(),
+            fs_inodes_used: parts[13].parse().ok(),
+            fs_inodes: parts[14].parse().ok(),
         })
     }
 
-    // fn ensure_header(&self, path: &Path, file: &mut std::fs::File) -> Result<()> {
+    // fn ensure_header(file: &mut File) -> Result<()> {
     //     if file.metadata()?.len() == 0 {
     //         let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|ES_USED_BYTES|ES_CAPACITY_BYTES|ES_INODES_USED|ES_INODES|PV_USED_BYTES|PV_CAPACITY_BYTES|PV_INODES_USED|PV_INODES\n";
     //         file.write_all(header.as_bytes())?;
@@ -66,9 +63,9 @@ impl MetricPodMinuteFsAdapter {
     }
 }
 
-impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
-    fn append_row(&self, pod: &str, dto: &MetricPodEntity) -> Result<()> {
-        let path_str = self.build_path(pod);
+impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
+    fn append_row(&self, node: &str, dto: &MetricNodeEntity) -> Result<()> {
+        let path_str = self.build_path(node);
         let path = Path::new(&path_str);
 
         if let Some(parent) = path.parent() {
@@ -91,7 +88,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
 
         // Format the row
         let row = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}\n",
+            "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}\n",
             dto.time.to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
             Self::opt(dto.cpu_usage_nano_cores),
             Self::opt(dto.cpu_usage_core_nano_seconds),
@@ -103,14 +100,10 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
             Self::opt(dto.network_physical_tx_bytes),
             Self::opt(dto.network_physical_rx_errors),
             Self::opt(dto.network_physical_tx_errors),
-            Self::opt(dto.es_used_bytes),
-            Self::opt(dto.es_capacity_bytes),
-            Self::opt(dto.es_inodes_used),
-            Self::opt(dto.es_inodes),
-            Self::opt(dto.pv_used_bytes),
-            Self::opt(dto.pv_capacity_bytes),
-            Self::opt(dto.pv_inodes_used),
-            Self::opt(dto.pv_inodes),
+            Self::opt(dto.fs_used_bytes),
+            Self::opt(dto.fs_capacity_bytes),
+            Self::opt(dto.fs_inodes_used),
+            Self::opt(dto.fs_inodes),
         );
 
 
@@ -122,32 +115,85 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
         Ok(())
     }
 
-    fn cleanup_old(&self, pod_uid: &str, before: DateTime<Utc>) -> Result<()> {
-        let metrics_dir = Path::new("data/metrics/pods").join(pod_uid).join("m");
+    /// Aggregate minute-level metrics into an hourly sample and append to hour file.
+    fn append_row_aggregated(
+        &self,
+        node_uid: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<()> {
+        // --- 1️⃣ Load minute data
+        let minute_adapter = MetricNodeMinuteFsAdapter;
+        let rows = minute_adapter.get_row_between(start, end, node_uid, None, None)?;
 
-        if !metrics_dir.exists() {
-            return Ok(());
+        if rows.is_empty() {
+            return Err(anyhow!("no minute data found for aggregation"));
         }
 
-        for entry in fs::read_dir(&metrics_dir)? {
-            let entry = entry?;
-            let path = entry.path();
+        // --- 2️⃣ Compute aggregates
+        let first = rows.first().unwrap();
+        let last = rows.last().unwrap();
 
-            // Only process .rcd files
-            if path.extension().and_then(|e| e.to_str()) != Some("rcd") {
-                continue;
+        let avg = |f: fn(&MetricNodeEntity) -> Option<u64>| -> Option<u64> {
+            let (sum, count): (u64, u64) =
+                rows.iter().filter_map(f).fold((0, 0), |(s, c), v| (s + v, c + 1));
+            if count > 0 {
+                Some(sum / count)
+            } else {
+                None
             }
+        };
 
-            if let Some(file_name) = path.file_stem().and_then(|s| s.to_str()) {
-                // Expect filenames like "2025-11-01"
-                if let Ok(file_date) = NaiveDate::parse_from_str(file_name, "%Y-%m-%d") {
-                    if let Some(naive_dt) = file_date.and_hms_opt(0, 0, 0) {
-                        let file_dt: DateTime<Utc> = DateTime::from_naive_utc_and_offset(naive_dt, Utc);
-                        if file_dt < before {
-                            fs::remove_file(&path)?;
-                        }
-                    }
-                }
+        let delta = |f: fn(&MetricNodeEntity) -> Option<u64>| -> Option<u64> {
+            match (f(first), f(last)) {
+                (Some(a), Some(b)) if b >= a => Some(b - a),
+                _ => None,
+            }
+        };
+
+        let aggregated = MetricNodeEntity {
+            time: end, // time marker = end of the aggregation window
+
+            // CPU
+            cpu_usage_nano_cores: avg(|r| r.cpu_usage_nano_cores),
+            cpu_usage_core_nano_seconds: delta(|r| r.cpu_usage_core_nano_seconds),
+
+            // Memory
+            memory_usage_bytes: avg(|r| r.memory_usage_bytes),
+            memory_working_set_bytes: avg(|r| r.memory_working_set_bytes),
+            memory_rss_bytes: avg(|r| r.memory_rss_bytes),
+            memory_page_faults: delta(|r| r.memory_page_faults),
+
+            // Network
+            network_physical_rx_bytes: delta(|r| r.network_physical_rx_bytes),
+            network_physical_tx_bytes: delta(|r| r.network_physical_tx_bytes),
+            network_physical_rx_errors: delta(|r| r.network_physical_rx_errors),
+            network_physical_tx_errors: delta(|r| r.network_physical_tx_errors),
+
+            // Filesystem
+            fs_used_bytes: avg(|r| r.fs_used_bytes),
+            fs_capacity_bytes: last.fs_capacity_bytes,
+            fs_inodes_used: avg(|r| r.fs_inodes_used),
+            fs_inodes: last.fs_inodes,
+        };
+
+        // --- 3️⃣ Append the aggregated row into the hour-level file
+        self.append_row(node_uid, &aggregated)?;
+
+        Ok(())
+    }
+
+
+    fn cleanup_old(&self, node_name: &str, before: DateTime<Utc>) -> Result<()> {
+        let cutoff_month = before.format("%Y-%m").to_string();
+
+        let paths = [
+            format!("data/metrics/nodes/{node_name}/m/{cutoff_month}.rcd"),
+        ];
+
+        for path in &paths {
+            if Path::new(path).exists() {
+                let _ = fs::remove_file(path);
             }
         }
 
@@ -161,7 +207,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
         object_name: &str,
         limit: Option<usize>,
         offset: Option<usize>,
-    ) -> Result<Vec<MetricPodEntity>> {
+    ) -> Result<Vec<MetricNodeEntity>> {
         let path = self.build_path(object_name);
         let path_obj = Path::new(&path);
         if !path_obj.exists() {
@@ -176,7 +222,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
         let header_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
         let header: Vec<&str> = header_line.split('|').collect();
 
-        let mut data: Vec<MetricPodEntity> = vec![];
+        let mut data: Vec<MetricNodeEntity> = vec![];
 
         for line in lines.flatten() {
             if let Some(row) = Self::parse_line(&header, &line) {
@@ -202,9 +248,9 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
         object_name: &str,
         limit: Option<usize>,
         offset: Option<usize>,
-    ) -> Result<Vec<MetricPodEntity>> {
+    ) -> Result<Vec<MetricNodeEntity>> {
         let rows = self.get_row_between(start, end, object_name, limit, offset)?;
-        let filtered: Vec<MetricPodEntity> = rows
+        let filtered: Vec<MetricNodeEntity> = rows
             .into_iter()
             .map(|mut row| {
                 // Zero out all other columns except the one requested

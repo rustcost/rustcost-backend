@@ -1,10 +1,8 @@
 use crate::core::kube_client::api_server;
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::NodeList;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Result};
 use reqwest::Client;
-use serde_json::Value;
-use std::process::Command;
 use tracing::debug;
 
 pub async fn fetch_nodes(token: &str, client: &Client) -> Result<NodeList> {
@@ -34,35 +32,19 @@ pub async fn fetch_node_summary(token: &str, client: &Client, node_name: &str) -
     Ok(resp.json().await?)
 }
 
-/// Fetches full node JSON (only called when changes detected)
-pub async fn fetch_nodes_json() -> anyhow::Result<String> {
-    let output = Command::new("kubectl")
-        .args(["get", "nodes", "-o", "json"])
-        .output()
-        .context("Failed to execute kubectl get nodes -o json")?;
-
-    if !output.status.success() {
-        return Err(anyhow!(
-            "kubectl command failed: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-}
-pub(crate) async fn get_latest_resource_version(token: &str, client: &Client) -> Result<String> {
-    let url = format!("{}/api/v1/nodes?limit=1", api_server());
-    let resp: Value = client
-        .get(&url)
-        .bearer_auth(token)
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-
-    Ok(resp["metadata"]["resourceVersion"]
-        .as_str()
-        .unwrap_or_default()
-        .to_string())
-}
+// pub(crate) async fn get_latest_resource_version(token: &str, client: &Client) -> Result<String> {
+//     let url = format!("{}/api/v1/nodes?limit=1", api_server());
+//     let resp: Value = client
+//         .get(&url)
+//         .bearer_auth(token)
+//         .send()
+//         .await?
+//         .error_for_status()?
+//         .json()
+//         .await?;
+//
+//     Ok(resp["metadata"]["resourceVersion"]
+//         .as_str()
+//         .unwrap_or_default()
+//         .to_string())
+// }

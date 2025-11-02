@@ -4,9 +4,7 @@ use crate::scheduler::tasks::collectors::k8s::node::task::{handle_node, update_n
 use crate::scheduler::tasks::collectors::k8s::pod::task::handle_pod;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
 use anyhow::Result;
-use std::fs;
-use std::process::Command;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 use crate::scheduler::tasks::collectors::k8s::container::task::handle_container;
 
 /// Collects node-level stats from the Kubelet `/stats/summary` endpoint.
@@ -30,7 +28,7 @@ pub async fn run() -> Result<()> {
                     Ok(result) => {
 
                         // if new node
-                        if let Some(name) = result.node_name {
+                        if let Some(_name) = result.node_name {
                             update_node_info(node).await?;
                         }
                         // new_pods.extend(result.updated_pods);
@@ -50,8 +48,8 @@ pub async fn run() -> Result<()> {
 #[derive(Debug, Default)]
 pub struct SummaryHandleResultDto {
     pub node_name: Option<String>,
-    pub updated_pods: Vec<String>,
-    pub updated_containers: Vec<String>,
+    // pub updated_pods: Vec<String>,
+    //  updated_containers: Vec<String>,
 }
 
 

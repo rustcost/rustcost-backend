@@ -9,7 +9,7 @@ use chrono::{Duration as ChronoDuration};
 
 /// Entry point — start all periodic background tasks.
 /// Call this once from your main() function.
-pub async fn start_all_tasks(mut shutdown: broadcast::Receiver<()>) {
+pub async fn start_all_tasks(shutdown: broadcast::Receiver<()>) {
     let mut s1 = shutdown.resubscribe();
     let mut s2 = shutdown.resubscribe();
     let mut s3 = shutdown.resubscribe();
@@ -95,13 +95,6 @@ async fn align_to_next_minute() {
         info!(wait_sec = wait, "Aligning to next minute");
         sleep(Duration::from_secs(wait)).await;
     }
-}
-
-async fn align_to_next_hour() {
-    let now = Utc::now();
-    let secs_until_next_hour = 3600 - (now.minute() as u64 * 60 + now.second() as u64);
-    info!(wait_sec = secs_until_next_hour, "Aligning to next hour");
-    sleep(Duration::from_secs(secs_until_next_hour)).await;
 }
 
 /// Aligns to next full hour + 30 seconds

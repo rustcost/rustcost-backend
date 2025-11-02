@@ -1,7 +1,7 @@
 /* Maps K8s API objects → internal models */
 
 use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
-use crate::core::persistence::metrics::node::metric_node_entity::NodeMetricsEntity;
+use crate::core::persistence::metrics::node::metric_node_entity::MetricNodeEntity;
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::Node;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, Summary};
 use anyhow::Result;
@@ -17,7 +17,7 @@ pub fn map_summary_to_node_info(summary: &Summary) -> InfoNodeEntity {
     }
 }
 
-pub fn map_summary_to_metrics(summary: &Summary) -> NodeMetricsEntity {
+pub fn map_summary_to_metrics(summary: &Summary) -> MetricNodeEntity {
     let n = &summary.node;
 
     // --- Compute summed physical network stats ---
@@ -25,7 +25,7 @@ pub fn map_summary_to_metrics(summary: &Summary) -> NodeMetricsEntity {
         .and_then(|net| sum_network_interfaces(net))
         .unwrap_or((None, None, None, None));
 
-    NodeMetricsEntity {
+    MetricNodeEntity {
         time: Utc::now(),
 
         // CPU
@@ -232,110 +232,4 @@ pub fn map_node_to_node_info_entity(node: &Node) -> Result<InfoNodeEntity> {
         image_total_size_bytes,
         ..Default::default()
     })
-}
-
-
-/// Parses K8s-style memory/storage quantity strings (e.g., "8131852Ki") → bytes.
-fn parse_quantity_to_bytes(input: &str) -> Option<u64> {
-    let input = input.trim().to_ascii_lowercase();
-    if let Some(v) = input.strip_suffix("ki") {
-        v.parse::<f64>().ok().map(|n| (n * 1024.0) as u64)
-    } else if let Some(v) = input.strip_suffix("mi") {
-        v.parse::<f64>().ok().map(|n| (n * 1024.0 * 1024.0) as u64)
-    } else if let Some(v) = input.strip_suffix("gi") {
-        v.parse::<f64>().ok().map(|n| (n * 1024.0 * 1024.0 * 1024.0) as u64)
-    } else if let Some(v) = input.strip_suffix("ti") {
-        v.parse::<f64>().ok().map(|n| (n * 1024.0 * 1024.0 * 1024.0 * 1024.0) as u64)
-    } else {
-        input.parse::<u64>().ok()
-    }
-}
-
-/// Helper: Convert a Kubernetes Node object to InfoNodeEntity
-pub(crate) fn map_node_to_info_entity(node: &Node) -> InfoNodeEntity {
-    let node_info = node.status.as_ref().and_then(|s| s.node_info.as_ref());
-    let addresses = node.status.as_ref().and_then(|s| s.addresses.as_ref());
-
-    // Pick internal IP if available
-    let internal_ip = addresses
-        .and_then(|addrs| addrs.iter().find(|a| a.address_type == "InternalIP"))
-        .map(|a| a.address.clone());
-
-    InfoNodeEntity {
-        node_name: Some(node.metadata.name.clone()),
-        node_uid: node.metadata.uid.clone(),
-        creation_timestamp: node
-            .metadata
-            .creation_timestamp
-            .as_ref()
-            .and_then(|ts| ts.parse().ok()),
-
-        resource_version: node.metadata.resource_version.clone(),
-        last_updated_info_at: Some(Utc::now()),
-
-        hostname: node_info.and_then(|ni| ni.machine_id.clone()),
-        internal_ip,
-
-        architecture: node_info.and_then(|ni| ni.architecture.clone()),
-        os_image: node_info.and_then(|ni| ni.os_image.clone()),
-        kernel_version: node_info.and_then(|ni| ni.kernel_version.clone()),
-        kubelet_version: node_info.and_then(|ni| ni.kubelet_version.clone()),
-        container_runtime: node_info.and_then(|ni| ni.container_runtime_version.clone()),
-        operating_system: node_info.and_then(|ni| ni.operating_system.clone()),
-
-        // Capacity / allocatable
-        cpu_capacity_cores: node
-            .status
-            .as_ref()
-            .and_then(|s| s.capacity.as_ref())
-            .and_then(|c| c.get("cpu"))
-            .and_then(|v| v.parse::<u32>().ok()),
-
-        memory_capacity_bytes: node
-            .status
-            .as_ref()
-            .and_then(|s| s.capacity.as_ref())
-            .and_then(|c| c.get("memory"))
-            .and_then(|v| v.parse::<u64>().ok()),
-
-        pod_capacity: node
-            .status
-            .as_ref()
-            .and_then(|s| s.capacity.as_ref())
-            .and_then(|c| c.get("pods"))
-            .and_then(|v| v.parse::<u32>().ok()),
-
-        cpu_allocatable_cores: node
-            .status
-            .as_ref()
-            .and_then(|s| s.allocatable.as_ref())
-            .and_then(|c| c.get("cpu"))
-            .and_then(|v| v.parse::<u32>().ok()),
-
-        memory_allocatable_bytes: node
-            .status
-            .as_ref()
-            .and_then(|s| s.allocatable.as_ref())
-            .and_then(|c| c.get("memory"))
-            .and_then(|v| v.parse::<u64>().ok()),
-
-        // Misc
-        image_count: node.status.as_ref().and_then(|s| s.images.as_ref().map(|imgs| imgs.len() as u32)),
-        image_names: node.status.as_ref().and_then(|s| {
-            s.images.as_ref().map(|imgs| {
-                imgs.iter()
-                    .flat_map(|i| i.names.clone())
-                    .collect::<Vec<_>>()
-            })
-        }),
-        image_total_size_bytes: node.status.as_ref().and_then(|s| {
-            s.images.as_ref().map(|imgs| {
-                imgs.iter()
-                    .filter_map(|i| i.size_bytes)
-                    .sum::<u64>()
-            })
-        }),
-
-        ..Default::default()
-    }
 }

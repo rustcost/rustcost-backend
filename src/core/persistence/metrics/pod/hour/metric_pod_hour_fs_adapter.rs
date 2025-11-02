@@ -1,7 +1,7 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use std::io::BufWriter;
 use std::{
     fs::File,
@@ -10,15 +10,16 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
+use crate::core::persistence::metrics::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
 
 /// Adapter for pod minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
-pub struct MetricPodMinuteFsAdapter;
+pub struct MetricPodHourFsAdapter;
 
-impl MetricPodMinuteFsAdapter {
+impl MetricPodHourFsAdapter {
     fn build_path(&self, pod_uid: &str) -> String {
-        let date = Utc::now().format("%Y-%m-%d").to_string();
-        format!("data/metrics/pods/{pod_uid}/m/{date}.rcd")
+        let month = Utc::now().format("%Y-%m").to_string();
+        format!("data/metrics/pods/{pod_uid}/h/{month}.rcd")
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {
@@ -52,7 +53,7 @@ impl MetricPodMinuteFsAdapter {
         })
     }
 
-    // fn ensure_header(&self, path: &Path, file: &mut std::fs::File) -> Result<()> {
+    // fn ensure_header(file: &mut File) -> Result<()> {
     //     if file.metadata()?.len() == 0 {
     //         let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|ES_USED_BYTES|ES_CAPACITY_BYTES|ES_INODES_USED|ES_INODES|PV_USED_BYTES|PV_CAPACITY_BYTES|PV_INODES_USED|PV_INODES\n";
     //         file.write_all(header.as_bytes())?;
@@ -66,7 +67,7 @@ impl MetricPodMinuteFsAdapter {
     }
 }
 
-impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
+impl MetricFsAdapterBase<MetricPodEntity> for MetricPodHourFsAdapter {
     fn append_row(&self, pod: &str, dto: &MetricPodEntity) -> Result<()> {
         let path_str = self.build_path(pod);
         let path = Path::new(&path_str);
@@ -122,32 +123,91 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
         Ok(())
     }
 
-    fn cleanup_old(&self, pod_uid: &str, before: DateTime<Utc>) -> Result<()> {
-        let metrics_dir = Path::new("data/metrics/pods").join(pod_uid).join("m");
+    /// Aggregate minute-level metrics into an hourly sample and append to hour file.
+    fn append_row_aggregated(
+        &self,
+        pod_uid: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<()> {
+        // --- 1️⃣ Load minute data
+        let minute_adapter = MetricPodMinuteFsAdapter;
+        let rows = minute_adapter.get_row_between(start, end, pod_uid, None, None)?;
 
-        if !metrics_dir.exists() {
-            return Ok(());
+        if rows.is_empty() {
+            return Err(anyhow!("no minute data found for aggregation"));
         }
 
-        for entry in fs::read_dir(&metrics_dir)? {
-            let entry = entry?;
-            let path = entry.path();
+        // --- 2️⃣ Compute aggregates
+        let first = &rows.first().unwrap();
+        let last = &rows.last().unwrap();
 
-            // Only process .rcd files
-            if path.extension().and_then(|e| e.to_str()) != Some("rcd") {
-                continue;
+        let avg = |f: fn(&MetricPodEntity) -> Option<u64>| -> Option<u64> {
+            let (sum, count): (u64, u64) =
+                rows.iter().filter_map(f).fold((0, 0), |(s, c), v| (s + v, c + 1));
+            if count > 0 {
+                Some(sum / count)
+            } else {
+                None
             }
+        };
 
-            if let Some(file_name) = path.file_stem().and_then(|s| s.to_str()) {
-                // Expect filenames like "2025-11-01"
-                if let Ok(file_date) = NaiveDate::parse_from_str(file_name, "%Y-%m-%d") {
-                    if let Some(naive_dt) = file_date.and_hms_opt(0, 0, 0) {
-                        let file_dt: DateTime<Utc> = DateTime::from_naive_utc_and_offset(naive_dt, Utc);
-                        if file_dt < before {
-                            fs::remove_file(&path)?;
-                        }
-                    }
-                }
+        let delta = |f: fn(&MetricPodEntity) -> Option<u64>| -> Option<u64> {
+            match (f(first), f(last)) {
+                (Some(a), Some(b)) if b >= a => Some(b - a),
+                _ => None,
+            }
+        };
+
+        let aggregated = MetricPodEntity {
+            time: end, // time marker = end of the aggregation window
+
+            // CPU
+            cpu_usage_nano_cores: avg(|r| r.cpu_usage_nano_cores),
+            cpu_usage_core_nano_seconds: delta(|r| r.cpu_usage_core_nano_seconds),
+
+            // Memory
+            memory_usage_bytes: avg(|r| r.memory_usage_bytes),
+            memory_working_set_bytes: avg(|r| r.memory_working_set_bytes),
+            memory_rss_bytes: avg(|r| r.memory_rss_bytes),
+            memory_page_faults: delta(|r| r.memory_page_faults),
+
+            // Network
+            network_physical_rx_bytes: delta(|r| r.network_physical_rx_bytes),
+            network_physical_tx_bytes: delta(|r| r.network_physical_tx_bytes),
+            network_physical_rx_errors: delta(|r| r.network_physical_rx_errors),
+            network_physical_tx_errors: delta(|r| r.network_physical_tx_errors),
+
+            // Ephemeral storage
+            es_used_bytes: avg(|r| r.es_used_bytes),
+            es_capacity_bytes: last.es_capacity_bytes,
+            es_inodes_used: avg(|r| r.es_inodes_used),
+            es_inodes: last.es_inodes,
+
+            // Persistent storage
+            pv_used_bytes: avg(|r| r.pv_used_bytes),
+            pv_capacity_bytes: last.pv_capacity_bytes,
+            pv_inodes_used: avg(|r| r.pv_inodes_used),
+            pv_inodes: last.pv_inodes,
+        };
+
+        // --- 3️⃣ Append the aggregated row into the hour-level file
+        self.append_row(pod_uid, &aggregated)?;
+
+        Ok(())
+    }
+
+
+    fn cleanup_old(&self, pod_uid: &str, before: DateTime<Utc>) -> Result<()> {
+        let cutoff_month = before.format("%Y-%m").to_string();
+
+        let paths = [
+            format!("data/metrics/pods/{pod_uid}/m/{cutoff_month}.rcd"),
+        ];
+
+        for path in &paths {
+            if Path::new(path).exists() {
+                let _ = fs::remove_file(path);
             }
         }
 

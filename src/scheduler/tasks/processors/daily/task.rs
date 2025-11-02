@@ -2,7 +2,7 @@ use anyhow::Result;
 use chrono::{Datelike, Utc};
 use std::fs;
 use std::path::PathBuf;
-use tracing::{debug, error};
+use tracing::{debug};
 
 const BASE_PATH: &str = "/data/rustcost/tsdb";
 

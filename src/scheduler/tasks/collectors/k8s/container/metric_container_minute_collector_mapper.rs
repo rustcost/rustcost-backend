@@ -1,5 +1,5 @@
 use crate::core::persistence::metrics::container::metric_container_entity::MetricContainerEntity;
-use crate::scheduler::tasks::collectors::k8s::summary_dto::{ContainerSummary, NetworkStats};
+use crate::scheduler::tasks::collectors::k8s::summary_dto::{ContainerSummary};
 use chrono::Utc;
 
 /// Maps a Kubernetes ContainerSummary (from Kubelet /stats/summary) into MetricContainerEntity.

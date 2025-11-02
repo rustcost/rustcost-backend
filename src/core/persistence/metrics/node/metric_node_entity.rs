@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct NodeMetricsEntity {
+pub struct MetricNodeEntity {
     pub time: DateTime<Utc>,
 
     // CPU

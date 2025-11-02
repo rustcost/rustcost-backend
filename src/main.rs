@@ -1,6 +1,5 @@
 use std::net::SocketAddr;
 use tokio::sync::broadcast;
-use tracing_subscriber::prelude::*;
 
 // --- Modules ---
 mod config;
@@ -16,7 +15,7 @@ pub mod core;
 use crate::config::config;
 // &'fixed Config
 use crate::routes::app_router;
-use crate::scheduler::schedule::run_minute_loop;
+use crate::scheduler::schedule::{run_hour_loop, run_minute_loop};
 use crate::scheduler::scheduler_start_all_tasks;
 
 // --- Entry Point ---
@@ -48,9 +47,10 @@ async fn run_server(app_config: &crate::config::Config) {
 
 
     if debug_mode {
-        run_minute_loop(&mut tokio::sync::broadcast::channel::<()>(1).1).await;
+        // run_minute_loop(&mut tokio::sync::broadcast::channel::<()>(1).1).await;
+        // run_hour_loop(&mut tokio::sync::broadcast::channel::<()>(5).1).await;
     } else {
-        let (shutdown_tx, shutdown_rx) = broadcast::channel::<()>(16);
+        let (_shutdown_tx, shutdown_rx) = broadcast::channel::<()>(16);
         scheduler_start_all_tasks(shutdown_rx).await;
     }
 

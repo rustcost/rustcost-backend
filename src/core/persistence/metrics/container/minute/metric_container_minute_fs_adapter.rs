@@ -1,7 +1,7 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::container::metric_container_entity::MetricContainerEntity;
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use std::io::BufWriter;
 use std::{
     fs::File,
@@ -17,8 +17,8 @@ pub struct MetricContainerMinuteFsAdapter;
 
 impl MetricContainerMinuteFsAdapter {
     fn build_path(&self, container_key: &str) -> String {
-        let month = Utc::now().format("%Y-%m").to_string();
-        format!("data/metrics/containers/{container_key}/m/{month}.rcd")
+        let date = Utc::now().format("%Y-%m-%d").to_string();
+        format!("data/metrics/containers/{container_key}/m/{date}.rcd")
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricContainerEntity> {
@@ -44,13 +44,13 @@ impl MetricContainerMinuteFsAdapter {
         })
     }
 
-    fn ensure_header(&self, path: &Path, file: &mut std::fs::File) -> Result<()> {
-        if !path.exists() {
-            let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|FS_USED_BYTES|FS_CAPACITY_BYTES|FS_ICONTAINERS_USED|FS_ICONTAINERS\n";
-            file.write_all(header.as_bytes())?;
-        }
-        Ok(())
-    }
+    // fn ensure_header(&self, path: &Path, file: &mut std::fs::File) -> Result<()> {
+    //     if !path.exists() {
+    //         let header = "TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|MEMORY_USAGE_BYTES|MEMORY_WORKING_SET_BYTES|MEMORY_RSS_BYTES|MEMORY_PAGE_FAULTS|NETWORK_PHYSICAL_RX_BYTES|NETWORK_PHYSICAL_TX_BYTES|NETWORK_PHYSICAL_RX_ERRORS|NETWORK_PHYSICAL_TX_ERRORS|FS_USED_BYTES|FS_CAPACITY_BYTES|FS_ICONTAINERS_USED|FS_ICONTAINERS\n";
+    //         file.write_all(header.as_bytes())?;
+    //     }
+    //     Ok(())
+    // }
 
     fn opt(v: Option<u64>) -> String {
         v.map(|x| x.to_string()).unwrap_or_default()
@@ -106,15 +106,31 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerMinuteFsAdapt
     }
 
     fn cleanup_old(&self, container_key: &str, before: DateTime<Utc>) -> Result<()> {
-        let cutoff_month = before.format("%Y-%m").to_string();
+        let metrics_dir = Path::new("data/metrics/containers").join(container_key).join("m");
 
-        let paths = [
-            format!("data/metrics/containers/{container_key}/m/{cutoff_month}.rcd"),
-        ];
+        if !metrics_dir.exists() {
+            return Ok(());
+        }
 
-        for path in &paths {
-            if Path::new(path).exists() {
-                let _ = fs::remove_file(path);
+        for entry in fs::read_dir(&metrics_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            // Only process .rcd files
+            if path.extension().and_then(|e| e.to_str()) != Some("rcd") {
+                continue;
+            }
+
+            if let Some(file_name) = path.file_stem().and_then(|s| s.to_str()) {
+                // Expect filenames like "2025-11-01"
+                if let Ok(file_date) = NaiveDate::parse_from_str(file_name, "%Y-%m-%d") {
+                    if let Some(naive_dt) = file_date.and_hms_opt(0, 0, 0) {
+                        let file_dt: DateTime<Utc> = DateTime::from_naive_utc_and_offset(naive_dt, Utc);
+                        if file_dt < before {
+                            fs::remove_file(&path)?;
+                        }
+                    }
+                }
             }
         }
 
