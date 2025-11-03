@@ -1,2 +1,3 @@
 pub mod metric_node_day_fs_adapter;
 pub mod metric_node_day_processor_repository_trait;
+pub mod metric_node_day_retention_repository_traits;
