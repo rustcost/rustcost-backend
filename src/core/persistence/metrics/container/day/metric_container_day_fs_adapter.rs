@@ -10,16 +10,18 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
+use std::path::PathBuf;
 use crate::core::persistence::metrics::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
+use crate::core::persistence::storage_path::metric_container_day_path;
 
 /// Adapter for container hour-level metrics.
 /// Responsible for appending hour samples to the filesystem and cleaning up old data.
 pub struct MetricContainerDayFsAdapter;
 
 impl MetricContainerDayFsAdapter {
-    fn build_path(&self, container_key: &str) -> String {
+    fn build_path(&self, container_key: &str) -> PathBuf {
         let year = Utc::now().format("%Y").to_string();
-        format!("data/metrics/containers/{container_key}/d/{year}.rcd")
+        metric_container_day_path(container_key, &year)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricContainerEntity> {
@@ -176,7 +178,7 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerDayFsAdapter 
         let cutoff_month = before.format("%Y").to_string();
 
         let paths = [
-            format!("data/metrics/containers/{container_uid}/d/{cutoff_month}.rcd"),
+            format!("data/metric/container/{container_uid}/d/{cutoff_month}.rcd"),
         ];
 
         for path in &paths {

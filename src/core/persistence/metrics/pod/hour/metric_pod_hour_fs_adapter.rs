@@ -10,16 +10,18 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
+use std::path::PathBuf;
 use crate::core::persistence::metrics::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
+use crate::core::persistence::storage_path::metric_pod_hour_path;
 
 /// Adapter for pod minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
 pub struct MetricPodHourFsAdapter;
 
 impl MetricPodHourFsAdapter {
-    fn build_path(&self, pod_uid: &str) -> String {
+    fn build_path(&self, pod_uid: &str) -> PathBuf {
         let month = Utc::now().format("%Y-%m").to_string();
-        format!("data/metrics/pods/{pod_uid}/h/{month}.rcd")
+        metric_pod_hour_path(pod_uid, &month)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {
@@ -202,7 +204,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodHourFsAdapter {
         let cutoff_month = before.format("%Y-%m").to_string();
 
         let paths = [
-            format!("data/metrics/pods/{pod_uid}/h/{cutoff_month}.rcd"),
+            format!("data/metric/pod/{pod_uid}/h/{cutoff_month}.rcd"),
         ];
 
         for path in &paths {

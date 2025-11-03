@@ -10,15 +10,17 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
+use std::path::PathBuf;
+use crate::core::persistence::storage_path::metric_container_minute_path;
 
 /// Adapter for container minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
 pub struct MetricContainerMinuteFsAdapter;
 
 impl MetricContainerMinuteFsAdapter {
-    fn build_path(&self, container_key: &str) -> String {
+    fn build_path(&self, container_key: &str) -> PathBuf {
         let date = Utc::now().format("%Y-%m-%d").to_string();
-        format!("data/metrics/containers/{container_key}/m/{date}.rcd")
+        metric_container_minute_path(container_key, &date)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricContainerEntity> {
@@ -106,7 +108,7 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerMinuteFsAdapt
     }
 
     fn cleanup_old(&self, container_key: &str, before: DateTime<Utc>) -> Result<()> {
-        let metrics_dir = Path::new("data/metrics/containers").join(container_key).join("m");
+        let metrics_dir = Path::new("data/metric/containers").join(container_key).join("m");
 
         if !metrics_dir.exists() {
             return Ok(());

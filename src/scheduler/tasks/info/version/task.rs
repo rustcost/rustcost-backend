@@ -4,11 +4,12 @@ use crate::scheduler::tasks::info::version::client::fetch_version;
 use crate::scheduler::tasks::info::version::info_version_collector_repository::InfoVersionCollectorRepositoryImpl;
 use anyhow::{Context, Result};
 use std::path::Path;
+use crate::core::persistence::storage_path::info_version_path;
 
 /// If version.rci exists → read it; otherwise fetch from API and create it.
 pub async fn load_or_init_version() -> Result<InfoVersionEntity> {
     let repo = InfoVersionCollectorRepositoryImpl::default();
-    let path = Path::new("data/info/version.rci");
+    let path = info_version_path();
 
     if !path.exists() {
         // Fetch from Kubernetes API instead of using default

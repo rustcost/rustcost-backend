@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{ Result};
 use chrono::{Duration, Utc};
@@ -11,13 +11,15 @@ use crate::core::persistence::metrics::pod::hour::metric_pod_hour_fs_adapter::Me
 use crate::core::persistence::metrics::pod::hour::metric_pod_hour_retention_repository_traits::MetricPodHourRetentionRepository;
 use crate::core::persistence::metrics::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
 use crate::core::persistence::metrics::pod::minute::metric_pod_minute_retention_repository_traits::MetricPodMinuteRetentionRepository;
+use crate::core::persistence::storage_path::{metric_pod_base_path, metric_pod_minute_path, metric_pod_root_path};
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_day_repository::MetricPodDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_hour_repository::MetricPodHourRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_minute_repository::MetricPodMinuteRetentionRepositoryImpl;
 
 /// Runs retention cleanup for all pods across minute/hour/day metrics.
 pub async fn run() -> Result<()> {
-    let base_dir = Path::new("data/metrics/pods/");
+
+    let base_dir = metric_pod_root_path();
 
     if !base_dir.exists() {
         debug!("No pods directory found at {:?}", base_dir);
@@ -66,7 +68,7 @@ pub async fn run() -> Result<()> {
 }
 
 /// Collects all pod UIDs (directory names) under the given base directory.
-fn collect_pod_uids(base_dir: &Path) -> Result<Vec<String>> {
+fn collect_pod_uids(base_dir: &PathBuf) -> Result<Vec<String>> {
     let mut pod_uids = Vec::new();
 
     for entry in fs::read_dir(base_dir)? {

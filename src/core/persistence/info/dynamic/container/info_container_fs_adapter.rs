@@ -6,17 +6,18 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
 };
+use crate::core::persistence::storage_path::{info_container_dir_path, info_container_file_path};
 
 /// File-based FS adapter for `InfoContainerEntity`.
 ///
 /// Each container has its own file at:
-/// `data/info/containers/{pod_uid}-{container_name}/info.rci`
+/// `data/info/container/{pod_uid}-{container_name}/info.rci`
 pub struct InfoContainerFsAdapter;
 
 impl InfoDynamicFsAdapterTrait<InfoContainerEntity> for InfoContainerFsAdapter {
     /// Reads the container info file into memory.
     fn read(&self, container_key: &str) -> Result<InfoContainerEntity> {
-        let path = format!("data/info/containers/{}/info.rci", container_key);
+        let path = info_container_file_path(container_key);
         if !Path::new(&path).exists() {
             return Ok(InfoContainerEntity::default());
         }
@@ -93,22 +94,22 @@ impl InfoDynamicFsAdapterTrait<InfoContainerEntity> for InfoContainerFsAdapter {
 
     /// Updates a container info file.
     fn update(&self, data: &InfoContainerEntity) -> Result<()> {
-        let key = Self::container_key(data)?;
-        Self::create_container_dir_if_missing(&key)?;
-        self.write(&key, data)
+        let container_key = Self::container_key(data)?;
+        Self::create_container_dir_if_missing(&container_key)?;
+        self.write(&container_key, data)
     }
 
     /// Deletes the container info file.
     fn delete(&self, key: &str) -> Result<()> {
-        let path = format!("data/info/containers/{}/info.rci", key);
+        let path = info_container_file_path(key);
         if Path::new(&path).exists() {
             fs::remove_file(&path).context("Failed to delete container info file")?;
         }
         Ok(())
     }
 
-    fn exists(&self, key: &str) -> Result<bool> {
-        let path = format!("data/info/containers/{}/info.rci", key);
+    fn exists(&self, container_key: &str) -> Result<bool> {
+        let path = info_container_file_path(container_key);
         Ok(Path::new(&path).exists())
     }
 }
@@ -129,18 +130,21 @@ impl InfoContainerFsAdapter {
 
     /// Ensures the container directory exists.
     pub fn create_container_dir_if_missing(container_key: &str) -> Result<()> {
-        let path = format!("data/info/containers/{}", container_key);
+        let path = info_container_file_path(container_key);
         fs::create_dir_all(&path).context("Failed to create container info directory")?;
         Ok(())
     }
 
     /// Writes the info.rci file atomically.
+
+
     fn write(&self, container_key: &str, data: &InfoContainerEntity) -> Result<()> {
-        let dir = format!("data/info/containers/{}", container_key);
+        let dir = info_container_dir_path(container_key);
         fs::create_dir_all(&dir).context("Failed to create container info directory")?;
 
-        let tmp_path = format!("{}/info.rci.tmp", dir);
-        let final_path = format!("{}/info.rci", dir);
+        let tmp_path = dir.join("info.rci.tmp");
+        let final_path = dir.join("info.rci");
+
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         macro_rules! write_field {

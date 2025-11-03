@@ -1,11 +1,8 @@
 use super::info_node_entity::InfoNodeEntity;
 use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use anyhow::{Context, Result};
-use std::{
-    fs::{self, File},
-    io::{BufRead, BufReader, Write},
-    path::Path,
-};
+use std::{fs::{self, File}, io, io::{BufRead, BufReader, Write}, path::Path};
+use crate::core::persistence::storage_path::{info_node_dir_path, info_node_file_path, metric_node_base_path};
 
 /// File-based FS adapter for the `InfoNodeEntity`.
 ///
@@ -19,7 +16,7 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
     /// Reads the node info file into memory.
     /// Returns a default entity if the file does not exist.
     fn read(&self, node_name: &str) -> Result<InfoNodeEntity> {
-        let path = format!("data/info/node/{}/info.rci", node_name);
+        let path = info_node_file_path(node_name);
 
         if !Path::new(&path).exists() {
             return Ok(InfoNodeEntity::default());
@@ -103,7 +100,7 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
 
     /// Deletes the node info file if present.
     fn delete(&self, node_name: &str) -> Result<()> {
-        let path = format!("data/info/node/{}/info.rci", node_name);
+        let path = info_node_file_path(node_name);
         if Path::new(&path).exists() {
             fs::remove_file(&path).context("Failed to delete node info file")?;
         }
@@ -111,7 +108,7 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
     }
 
     fn exists(&self, node_name: &str) -> Result<bool> {
-        let path = format!("data/info/node/{}/info.rci", node_name);
+        let path = info_node_file_path(node_name);
         Ok(Path::new(&path).exists())
     }
 
@@ -119,13 +116,14 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
 
 impl InfoNodeFsAdapter {
     /// Ensures the per-node data directories exist.
-    /// Creates: data/metrics/nodes/{node_name}/{m,h,d}
+    /// Creates: data/metric/node/{node_name}/{m,h,d}
     pub fn create_node_dir_if_missing(node_name: &str) -> Result<()> {
-        let base = format!("data/metrics/nodes/{node_name}");
-        for sub in ["m", "h", "d"] {
-            let path = format!("{base}/{sub}");
-            if let Err(e) = std::fs::create_dir_all(&path) {
-                if e.kind() != std::io::ErrorKind::AlreadyExists {
+        let base = metric_node_base_path(node_name);
+
+        for sub in ["d", "h", "m"] {
+            let path = base.join(sub);
+            if let Err(e) = fs::create_dir_all(&path) {
+                if e.kind() != io::ErrorKind::AlreadyExists {
                     return Err(e.into());
                 }
             }
@@ -135,11 +133,12 @@ impl InfoNodeFsAdapter {
 
     /// Internal helper: atomically writes a node info file.
     fn write(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
-        let dir = format!("data/info/node/{}", node_name);
+
+        let dir = info_node_dir_path(node_name);
         fs::create_dir_all(&dir).context("Failed to create node info directory")?;
 
-        let tmp_path = format!("{}/info.rci.tmp", dir);
-        let final_path = format!("{}/info.rci", dir);
+        let tmp_path = dir.join("info.rci.tmp");
+        let final_path = dir.join("info.rci");
 
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 

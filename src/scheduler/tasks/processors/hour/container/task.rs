@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use chrono::{Duration, Timelike, Utc};
@@ -10,21 +10,21 @@ use crate::core::persistence::metrics::container::hour::{
 };
 use crate::scheduler::tasks::processors::hour::container::metric_container_hour_processor_repository::MetricContainerHourProcessorRepositoryImpl;
 use tracing::{debug, error};
+use crate::core::persistence::storage_path::{metric_container_root_path, metric_pod_root_path};
 
 /// Aggregates all containers’ minute-level metrics into hour metrics.
 ///
-/// This scans `data/metrics/containers/{container_key}/` and calls `append_row_aggregated()`
+/// This scans `data/metric/container/{container_key}/` and calls `append_row_aggregated()`
 /// for each container directory, generating an hour summary.
 pub async fn process_container_minute_to_hour() -> Result<()> {
     let (start, end) = previous_hour_window()?;
-    let base_dir = Path::new("data/metrics/containers/");
-
+    let base_dir = metric_container_root_path();
     if !base_dir.exists() {
         debug!("No containers directory found at {:?}", base_dir);
         return Ok(());
     }
 
-    let container_keys = collect_container_keys(base_dir)?;
+    let container_keys = collect_container_keys(&base_dir)?;
     if container_keys.is_empty() {
         debug!("No container metric directories found under {:?}", base_dir);
         return Ok(());
@@ -51,7 +51,7 @@ fn previous_hour_window() -> Result<(chrono::DateTime<Utc>, chrono::DateTime<Utc
 }
 
 /// Collects all container UIDs (directory names) under the given base directory.
-fn collect_container_keys(base_dir: &Path) -> Result<Vec<String>> {
+fn collect_container_keys(base_dir: &PathBuf) -> Result<Vec<String>> {
     let mut container_keys = Vec::new();
 
     for entry in fs::read_dir(base_dir)? {

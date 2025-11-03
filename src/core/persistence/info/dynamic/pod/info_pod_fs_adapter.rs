@@ -6,10 +6,11 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
 };
+use crate::core::persistence::storage_path::{info_pod_dir_path, info_pod_file_path};
 
 /// File-based FS adapter for `InfoPodEntity`.
 ///
-/// Each pod has its own file at `data/info/pods/{pod_uid}/info.rci`.
+/// Each pod has its own file at `data/info/pod/{pod_uid}/info.rci`.
 /// Uses a simple key–value text format for human readability.
 pub struct InfoPodFsAdapter;
 
@@ -17,7 +18,7 @@ impl InfoDynamicFsAdapterTrait<InfoPodEntity> for InfoPodFsAdapter {
     /// Reads the pod info file into memory.
     /// Returns a default entity if the file does not exist.
     fn read(&self, pod_uid: &str) -> Result<InfoPodEntity> {
-        let path = format!("data/info/pods/{}/info.rci", pod_uid);
+        let path = info_pod_file_path(pod_uid);
 
         if !Path::new(&path).exists() {
             return Ok(InfoPodEntity::default());
@@ -124,7 +125,7 @@ impl InfoDynamicFsAdapterTrait<InfoPodEntity> for InfoPodFsAdapter {
 
     /// Deletes the pod info file if present.
     fn delete(&self, pod_uid: &str) -> Result<()> {
-        let path = format!("data/info/pods/{}/info.rci", pod_uid);
+        let path = info_pod_file_path(pod_uid);
         if Path::new(&path).exists() {
             fs::remove_file(&path).context("Failed to delete pod info file")?;
         }
@@ -132,7 +133,7 @@ impl InfoDynamicFsAdapterTrait<InfoPodEntity> for InfoPodFsAdapter {
     }
 
     fn exists(&self, pod_uid: &str) -> Result<bool> {
-        let path = format!("data/info/pods/{}/info.rci", pod_uid);
+        let path = info_pod_file_path(pod_uid);
         Ok(Path::new(&path).exists())
     }
 }
@@ -140,14 +141,14 @@ impl InfoDynamicFsAdapterTrait<InfoPodEntity> for InfoPodFsAdapter {
 impl InfoPodFsAdapter {
     /// Ensures the pod info directory exists.
     pub fn create_pod_dir_if_missing(pod_uid: &str) -> Result<()> {
-        let path = format!("data/info/pods/{}", pod_uid);
+        let path = info_pod_dir_path(pod_uid);
         fs::create_dir_all(&path).context("Failed to create pod info directory")?;
         Ok(())
     }
 
     /// Writes the info.rci file atomically.
     fn write(&self, pod_uid: &str, data: &InfoPodEntity) -> Result<()> {
-        let dir = format!("data/info/pods/{}", pod_uid);
+        let dir = format!("data/info/pod/{}", pod_uid);
         fs::create_dir_all(&dir).context("Failed to create pod info directory")?;
 
         let tmp_path = format!("{}/info.rci.tmp", dir);

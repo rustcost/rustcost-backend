@@ -21,7 +21,7 @@ pub async fn fetch_nodes(token: &str, client: &Client) -> Result<NodeList> {
 }
 
 pub async fn fetch_node_summary(token: &str, client: &Client, node_name: &str) -> Result<Summary> {
-    let url = format!("{}/api/v1/nodes/{}/proxy/stats/summary", api_server(), node_name);
+    let url = format!("{}/api/v1/node/{}/proxy/stats/summary", api_server(), node_name);
     let resp = client.get(&url)
         .bearer_auth(token)
         .send()

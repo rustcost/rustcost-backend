@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use chrono::{Duration, Timelike, Utc};
@@ -10,21 +10,22 @@ use crate::core::persistence::metrics::node::hour::{
 };
 use crate::scheduler::tasks::processors::hour::node::metric_node_hour_processor_repository::MetricNodeHourProcessorRepositoryImpl;
 use tracing::{debug, error};
+use crate::core::persistence::storage_path::metric_node_root_path;
 
 /// Aggregates all nodes’ minute-level metrics into hour metrics.
 ///
-/// This scans `data/metrics/nodes/{node_name}/` and calls `append_row_aggregated()`
+/// This scans `data/metric/node/{node_name}/` and calls `append_row_aggregated()`
 /// for each node directory, generating an hour summary.
 pub async fn process_node_minute_to_hour() -> Result<()> {
     let (start, end) = previous_hour_window()?;
-    let base_dir = Path::new("data/metrics/nodes/");
+    let base_dir = metric_node_root_path();
 
     if !base_dir.exists() {
         debug!("No nodes directory found at {:?}", base_dir);
         return Ok(());
     }
 
-    let node_names = collect_node_names(base_dir)?;
+    let node_names = collect_node_names(&base_dir)?;
     if node_names.is_empty() {
         debug!("No node metric directories found under {:?}", base_dir);
         return Ok(());
@@ -51,7 +52,7 @@ fn previous_hour_window() -> Result<(chrono::DateTime<Utc>, chrono::DateTime<Utc
 }
 
 /// Collects all node UIDs (directory names) under the given base directory.
-fn collect_node_names(base_dir: &Path) -> Result<Vec<String>> {
+fn collect_node_names(base_dir: &PathBuf) -> Result<Vec<String>> {
     let mut node_names = Vec::new();
 
     for entry in fs::read_dir(base_dir)? {

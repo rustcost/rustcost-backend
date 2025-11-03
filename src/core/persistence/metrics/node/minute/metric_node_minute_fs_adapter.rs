@@ -9,15 +9,17 @@ use std::{
     io::{BufRead, BufReader},
     path::Path,
 };
+use std::path::PathBuf;
+use crate::core::persistence::storage_path::metric_node_minute_path;
 
 /// Adapter for node minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
 pub struct MetricNodeMinuteFsAdapter;
 
 impl MetricNodeMinuteFsAdapter {
-    fn build_path(&self, node_name: &str) -> String {
+    fn build_path(&self, node_name: &str) -> PathBuf {
         let date = Utc::now().format("%Y-%m-%d").to_string();
-        format!("data/metrics/nodes/{node_name}/m/{date}.rcd")
+        metric_node_minute_path(node_name, &date)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricNodeEntity> {
@@ -98,7 +100,7 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeMinuteFsAdapter {
         Ok(())
     }
     fn cleanup_old(&self, node: &str, before: DateTime<Utc>) -> Result<()> {
-        let metrics_dir = Path::new("data/metrics/nodes").join(node).join("m");
+        let metrics_dir = Path::new("data/metric/node").join(node).join("m");
 
         if !metrics_dir.exists() {
             return Ok(());

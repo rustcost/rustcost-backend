@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Result};
 use chrono::{Duration, Utc};
@@ -11,20 +11,21 @@ use crate::core::persistence::metrics::node::hour::metric_node_hour_fs_adapter::
 use crate::core::persistence::metrics::node::hour::metric_node_hour_retention_repository_traits::MetricNodeHourRetentionRepository;
 use crate::core::persistence::metrics::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
 use crate::core::persistence::metrics::node::minute::metric_node_minute_retention_repository_traits::MetricNodeMinuteRetentionRepository;
+use crate::core::persistence::storage_path::metric_node_root_path;
 use crate::scheduler::tasks::processors::retention::node::metric_processor_retention_node_day_repository::MetricNodeDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::node::metric_processor_retention_node_hour_repository::MetricNodeHourRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::node::metric_processor_retention_node_minute_repository::MetricNodeMinuteRetentionRepositoryImpl;
 
 /// Runs retention cleanup for all nodes across minute/hour/day metrics.
 pub async fn run() -> Result<()> {
-    let base_dir = Path::new("data/metrics/nodes/");
+    let base_dir = metric_node_root_path();
 
     if !base_dir.exists() {
         debug!("No nodes directory found at {:?}", base_dir);
         return Ok(());
     }
 
-    let node_uids = collect_node_uids(base_dir)?;
+    let node_uids = collect_node_uids(&base_dir)?;
     if node_uids.is_empty() {
         debug!("No node metric directories found under {:?}", base_dir);
         return Ok(());
@@ -66,7 +67,7 @@ pub async fn run() -> Result<()> {
 }
 
 /// Collects all node UIDs (directory names) under the given base directory.
-fn collect_node_uids(base_dir: &Path) -> Result<Vec<String>> {
+fn collect_node_uids(base_dir: &PathBuf) -> Result<Vec<String>> {
     let mut node_uids = Vec::new();
 
     for entry in fs::read_dir(base_dir)? {

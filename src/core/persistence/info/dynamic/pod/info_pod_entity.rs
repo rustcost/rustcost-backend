@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 /// Represents static and runtime information for a Kubernetes Pod.
 ///
 /// Derived from Pod metadata (`.metadata`, `.spec`, `.status`) and runtime summary.
-/// Stored at: `data/info/pods/{pod_uid}/info.rci`
+/// Stored at: `data/info/pod/{pod_uid}/info.rci`
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct InfoPodEntity {

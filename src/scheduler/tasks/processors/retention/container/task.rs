@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{ Result};
 use chrono::{Duration, Utc};
@@ -11,20 +11,21 @@ use crate::core::persistence::metrics::container::hour::metric_container_hour_fs
 use crate::core::persistence::metrics::container::hour::metric_container_hour_retention_repository_traits::MetricContainerHourRetentionRepository;
 use crate::core::persistence::metrics::container::minute::metric_container_minute_fs_adapter::MetricContainerMinuteFsAdapter;
 use crate::core::persistence::metrics::container::minute::metric_container_minute_retention_repository_traits::MetricContainerMinuteRetentionRepository;
+use crate::core::persistence::storage_path::metric_container_root_path;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_day_repository::MetricContainerDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_hour_repository::MetricContainerHourRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_minute_repository::MetricContainerMinuteRetentionRepositoryImpl;
 
 /// Runs retention cleanup for all containers across minute/hour/day metrics.
 pub async fn run() -> Result<()> {
-    let base_dir = Path::new("data/metrics/containers/");
+    let base_dir = metric_container_root_path();
 
     if !base_dir.exists() {
         debug!("No containers directory found at {:?}", base_dir);
         return Ok(());
     }
 
-    let container_uids = collect_container_uids(base_dir)?;
+    let container_uids = collect_container_uids(&base_dir)?;
     if container_uids.is_empty() {
         debug!("No container metric directories found under {:?}", base_dir);
         return Ok(());
@@ -66,7 +67,7 @@ pub async fn run() -> Result<()> {
 }
 
 /// Collects all container UIDs (directory names) under the given base directory.
-fn collect_container_uids(base_dir: &Path) -> Result<Vec<String>> {
+fn collect_container_uids(base_dir: &PathBuf) -> Result<Vec<String>> {
     let mut container_uids = Vec::new();
 
     for entry in fs::read_dir(base_dir)? {

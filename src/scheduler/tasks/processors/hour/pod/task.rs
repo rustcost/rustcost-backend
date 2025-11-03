@@ -10,21 +10,22 @@ use crate::core::persistence::metrics::pod::hour::{
 };
 use crate::scheduler::tasks::processors::hour::pod::metric_pod_hour_processor_repository::MetricPodHourProcessorRepositoryImpl;
 use tracing::{debug, error};
+use crate::core::persistence::storage_path::metric_pod_root_path;
 
 /// Aggregates all pods’ minute-level metrics into hour metrics.
 ///
-/// This scans `data/metrics/pods/{pod_uid}/` and calls `append_row_aggregated()`
+/// This scans `data/metric/pod/{pod_uid}/` and calls `append_row_aggregated()`
 /// for each pod directory, generating an hour summary.
 pub async fn process_pod_minute_to_hour() -> Result<()> {
     let (start, end) = previous_hour_window()?;
-    let base_dir = Path::new("data/metrics/pods/");
+    let base_dir = metric_pod_root_path();
 
     if !base_dir.exists() {
         debug!("No pods directory found at {:?}", base_dir);
         return Ok(());
     }
 
-    let pod_uids = collect_pod_uids(base_dir)?;
+    let pod_uids = collect_pod_uids(&base_dir)?;
     if pod_uids.is_empty() {
         debug!("No pod metric directories found under {:?}", base_dir);
         return Ok(());
