@@ -3,7 +3,6 @@ use crate::core::persistence::info::fixed::version::info_version_entity::InfoVer
 use crate::scheduler::tasks::info::version::client::fetch_version;
 use crate::scheduler::tasks::info::version::info_version_collector_repository::InfoVersionCollectorRepositoryImpl;
 use anyhow::{Context, Result};
-use std::path::Path;
 use crate::core::persistence::storage_path::info_version_path;
 
 /// If version.rci exists → read it; otherwise fetch from API and create it.

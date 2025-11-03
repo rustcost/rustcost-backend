@@ -1,7 +1,6 @@
 use crate::core::persistence::info::fixed::unit_price::info_unit_price_collector_repository_trait::InfoUnitPriceCollectorRepository;
 use crate::core::persistence::info::fixed::unit_price::info_unit_price_entity::InfoUnitPriceEntity;
 use anyhow::Result;
-use std::path::Path;
 use crate::core::persistence::storage_path::info_unit_price_path;
 use crate::scheduler::tasks::info::unit_price::info_unit_price_collector_repository::InfoUnitPriceCollectorRepositoryImpl;
 

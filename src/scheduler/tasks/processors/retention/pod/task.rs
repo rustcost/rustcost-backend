@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{ Result};
 use chrono::{Duration, Utc};
@@ -11,7 +11,7 @@ use crate::core::persistence::metrics::pod::hour::metric_pod_hour_fs_adapter::Me
 use crate::core::persistence::metrics::pod::hour::metric_pod_hour_retention_repository_traits::MetricPodHourRetentionRepository;
 use crate::core::persistence::metrics::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
 use crate::core::persistence::metrics::pod::minute::metric_pod_minute_retention_repository_traits::MetricPodMinuteRetentionRepository;
-use crate::core::persistence::storage_path::{metric_pod_base_path, metric_pod_minute_path, metric_pod_root_path};
+use crate::core::persistence::storage_path::metric_pod_root_path;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_day_repository::MetricPodDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_hour_repository::MetricPodHourRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_minute_repository::MetricPodMinuteRetentionRepositoryImpl;
@@ -26,7 +26,7 @@ pub async fn run() -> Result<()> {
         return Ok(());
     }
 
-    let pod_uids = collect_pod_uids(base_dir)?;
+    let pod_uids = collect_pod_uids(&base_dir)?;
     if pod_uids.is_empty() {
         debug!("No pod metric directories found under {:?}", base_dir);
         return Ok(());

@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use chrono::{Duration, Timelike, Utc};
@@ -10,7 +10,7 @@ use crate::core::persistence::metrics::container::hour::{
 };
 use crate::scheduler::tasks::processors::hour::container::metric_container_hour_processor_repository::MetricContainerHourProcessorRepositoryImpl;
 use tracing::{debug, error};
-use crate::core::persistence::storage_path::{metric_container_root_path, metric_pod_root_path};
+use crate::core::persistence::storage_path::{metric_container_root_path};
 
 /// Aggregates all containers’ minute-level metrics into hour metrics.
 ///

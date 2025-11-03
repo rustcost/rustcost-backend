@@ -12,7 +12,7 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::container::minute::metric_container_minute_fs_adapter::MetricContainerMinuteFsAdapter;
-use crate::core::persistence::storage_path::{metric_container_day_path, metric_container_hour_path};
+use crate::core::persistence::storage_path::metric_container_hour_path;
 
 /// Adapter for container minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
