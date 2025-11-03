@@ -130,7 +130,7 @@ impl InfoContainerFsAdapter {
 
     /// Ensures the container directory exists.
     pub fn create_container_dir_if_missing(container_key: &str) -> Result<()> {
-        let path = info_container_file_path(container_key);
+        let path = info_container_dir_path(container_key);
         fs::create_dir_all(&path).context("Failed to create container info directory")?;
         Ok(())
     }
@@ -148,11 +148,11 @@ impl InfoContainerFsAdapter {
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         macro_rules! write_field {
-            ($key:expr, $val:expr) => {
-                let val_str = $val.clone().map_or(String::new(), |v| v.to_string());
-                writeln!(f, "{}:{}", $key, val_str)?;
-            };
-        }
+        ($key:expr, $val:expr) => {
+            let val_str = $val.clone().map_or(String::new(), |v| v.to_string());
+            writeln!(f, "{}:{}", $key, val_str)?;
+        };
+    }
 
         // Identity
         write_field!("POD_UID", data.pod_uid);
@@ -199,7 +199,22 @@ impl InfoContainerFsAdapter {
         write_field!("LAST_CHECK_DELETED_COUNT", data.last_check_deleted_count.map(|v| v.to_string()));
 
         f.flush()?;
+
+        // ✅ Windows-safe finalization
+        #[cfg(windows)]
+        {
+            if final_path.exists() {
+                fs::remove_file(&final_path).ok();
+            }
+        }
+
+        // Use fs::replace if available (Rust 1.63+)
+        #[cfg(has_replace)]
+        fs::replace(&tmp_path, &final_path).context("Failed to finalize container info file")?;
+
+        #[cfg(not(has_replace))]
         fs::rename(&tmp_path, &final_path).context("Failed to finalize container info file")?;
+
         Ok(())
     }
 }
