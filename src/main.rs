@@ -5,6 +5,7 @@ use tokio::sync::broadcast;
 mod config;
 mod logging;
 mod domain;
+mod api;
 mod errors;
 mod handlers;
 mod routes;

@@ -1,5 +1,4 @@
 use anyhow::Result;
-
 pub mod version;
 pub mod settings;
 pub mod unit_price;

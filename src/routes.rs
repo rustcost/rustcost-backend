@@ -7,14 +7,19 @@ use axum::{
 
 /// Build the main application router
 pub fn app_router() -> Router {
+    // Metrics, Info, System subrouters live under /api/v1
+    let api_v1 = Router::new()
+        .nest("/metrics", crate::api::routes::metrics_routes::metrics_routes())
+        .nest("/info", crate::api::routes::info_routes::info_routes())
+        .nest("/system", crate::api::routes::system_routes::system_routes());
+
     Router::new()
         // Root route
         .route("/", get(root))
         // Health check
         .route("/health", get(health_check))
-        // Mount node-related routes under /api/v1
-        // .nest("/api/v1/nodes", node_handler::node_routes()
-        // .nest("/api/v1/pods", pod_handler::pod_routes()
+        // API v1
+        .nest("/api/v1", api_v1)
 
         // Fallback handler for 404
         .fallback(handler_404)

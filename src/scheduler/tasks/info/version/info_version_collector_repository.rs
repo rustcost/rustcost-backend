@@ -2,6 +2,7 @@ use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixe
 use crate::core::persistence::info::fixed::version::info_version_collector_repository_trait::InfoVersionCollectorRepository;
 use crate::core::persistence::info::fixed::version::info_version_entity::InfoVersionEntity;
 use crate::core::persistence::info::fixed::version::info_version_fs_adapter::InfoVersionFsAdapter;
+use crate::core::persistence::info::fixed::version::info_version_repository_trait::InfoVersionRepository;
 use anyhow::Result;
 
 /// Concrete collector-side repository implementation for managing Versions.
@@ -30,6 +31,21 @@ impl InfoVersionCollectorRepository for InfoVersionCollectorRepositoryImpl {
     }
 
     fn create(&self, data: &InfoVersionEntity) -> Result<()> {
+        self.adapter.insert(data)
+    }
+
+    fn update(&self, data: &InfoVersionEntity) -> Result<()> {
+        self.adapter.update(data)
+    }
+}
+
+/// Implement the unified domain-facing repository as well.
+impl InfoVersionRepository for InfoVersionCollectorRepositoryImpl {
+    fn get(&self) -> Result<InfoVersionEntity> {
+        self.adapter.read()
+    }
+
+    fn insert(&self, data: &InfoVersionEntity) -> Result<()> {
         self.adapter.insert(data)
     }
 
