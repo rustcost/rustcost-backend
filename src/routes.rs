@@ -4,6 +4,8 @@ use axum::{
     routing::get,
     Router,
 };
+use tower_http::cors::CorsLayer;
+
 
 /// Build the main application router
 pub fn app_router() -> Router {
@@ -24,6 +26,8 @@ pub fn app_router() -> Router {
         // Fallback handler for 404
         .fallback(handler_404)
         // Attach shared application state ONCE here
+        // ✅ Apply CORS layer to all routes
+        .layer(CorsLayer::very_permissive())
 }
 
 // Handler for root
