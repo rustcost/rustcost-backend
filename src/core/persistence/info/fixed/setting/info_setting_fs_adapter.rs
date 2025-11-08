@@ -7,9 +7,7 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-
-/// Location of the persisted settings file.
-const PATH: &str = "data/info/settings.rci";
+use crate::core::persistence::storage_path::info_setting_path;
 
 /// File-based FS_ADAPTER implementation for the `Settings` entity.
 ///
@@ -22,11 +20,13 @@ impl InfoFixedFsAdapterTrait<InfoSettingEntity> for InfoSettingFsAdapter {
     /// Reads the settings file into memory.
     /// Returns default values if the file does not exist.
     fn read(&self) -> Result<InfoSettingEntity> {
-        if !Path::new(PATH).exists() {
+        let path = info_setting_path();
+
+        if !path.exists() {
             return Ok(InfoSettingEntity::default());
         }
 
-        let file = File::open(PATH).context("Failed to open settings file")?;
+        let file = File::open(&path).context("Failed to open settings file")?;
         let reader = BufReader::new(file);
         let mut s = InfoSettingEntity::default();
 
@@ -136,8 +136,10 @@ impl InfoFixedFsAdapterTrait<InfoSettingEntity> for InfoSettingFsAdapter {
     }
 
     fn delete(&self) -> Result<()> {
-        if Path::new(PATH).exists() {
-            fs::remove_file(PATH).context("Failed to delete settings file")?;
+        let path = info_setting_path();
+
+        if path.exists() {
+            fs::remove_file(&path).context("Failed to delete settings file")?;
         }
         Ok(())
     }
@@ -146,11 +148,13 @@ impl InfoFixedFsAdapterTrait<InfoSettingEntity> for InfoSettingFsAdapter {
 impl InfoSettingFsAdapter {
     /// Internal helper to atomically write the settings file.
     fn write(&self, data: &InfoSettingEntity) -> Result<()> {
-        if let Some(dir) = Path::new(PATH).parent() {
+        let path = info_setting_path();
+
+        if let Some(dir) = path.parent() {
             fs::create_dir_all(dir).context("Failed to create settings directory")?;
         }
 
-        let tmp_path = format!("{PATH}.tmp");
+        let tmp_path = path.with_extension("rci.tmp");
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         writeln!(f, "IS_DARK_MODE:{}", data.is_dark_mode)?;
@@ -192,7 +196,7 @@ impl InfoSettingFsAdapter {
 
         f.flush()?;
 
-        fs::rename(&tmp_path, PATH).context("Failed to finalize settings file")?;
+        fs::rename(&tmp_path, &path).context("Failed to finalize settings file")?;
         Ok(())
     }
 }

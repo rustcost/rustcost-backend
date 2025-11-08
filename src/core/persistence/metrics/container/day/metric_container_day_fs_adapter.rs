@@ -1,6 +1,6 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::container::metric_container_entity::MetricContainerEntity;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use std::io::BufWriter;
 use std::{
@@ -12,7 +12,7 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
-use crate::core::persistence::storage_path::metric_container_day_path;
+use crate::core::persistence::storage_path::{metric_container_day_dir, metric_container_day_path};
 
 /// Adapter for container hour-level metrics.
 /// Responsible for appending hour samples to the filesystem and cleaning up old data.
@@ -174,21 +174,31 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerDayFsAdapter 
 
 
 
-    fn cleanup_old(&self, container_uid: &str, before: DateTime<Utc>) -> Result<()> {
-        let cutoff_month = before.format("%Y").to_string();
+    fn cleanup_old(&self, container_key: &str, before: DateTime<Utc>) -> Result<()> {
+        let cutoff_year: i32 = before.format("%Y").to_string().parse().unwrap_or(0);
+        let dir = metric_container_day_dir(container_key);
 
-        let paths = [
-            format!("data/metric/container/{container_uid}/d/{cutoff_month}.rcd"),
-        ];
+        if !dir.exists() {
+            return Ok(());
+        }
 
-        for path in &paths {
-            if Path::new(path).exists() {
-                let _ = fs::remove_file(path);
+        for entry in fs::read_dir(&dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if let Some(filename) = path.file_stem().and_then(|s| s.to_str()) {
+                if let Ok(year) = filename.parse::<i32>() {
+                    if year < cutoff_year {
+                        fs::remove_file(&path)
+                            .with_context(|| format!("Failed to delete old metric file {:?}", path))?;
+                    }
+                }
             }
         }
 
         Ok(())
     }
+
 
     fn get_column_between(
         &self,

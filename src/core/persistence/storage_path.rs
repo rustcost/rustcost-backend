@@ -110,12 +110,36 @@ pub fn metric_container_day_path(container_key: &str, period_year: &str) -> Path
     metric_path(EntityType::Container, container_key, MetricGranularity::Day, period_year)
 }
 
+pub fn metric_container_day_dir(container_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("container")
+        .join(container_key)
+        .join("d")
+}
+
 pub fn metric_container_hour_path(container_key: &str, period_month: &str) -> PathBuf {
     metric_path(EntityType::Container, container_key, MetricGranularity::Hour, period_month)
 }
 
+pub fn metric_container_hour_dir(container_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("container")
+        .join(container_key)
+        .join("h")
+}
+
 pub fn metric_container_minute_path(container_key: &str, period_day: &str) -> PathBuf {
     metric_path(EntityType::Container, container_key, MetricGranularity::Minute, period_day)
+}
+
+pub fn metric_container_minute_dir(container_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("container")
+        .join(container_key)
+        .join("m")
 }
 
 // Convenience wrappers for pods
@@ -128,15 +152,33 @@ pub fn metric_pod_rustcost_base_path(pod_key: &str) -> PathBuf {
 pub fn metric_pod_day_path(pod_key: &str, period_year: &str) -> PathBuf {
     metric_path(EntityType::Pod, pod_key, MetricGranularity::Day, period_year)
 }
-
+pub fn metric_pod_day_dir(pod_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("pod")
+        .join(pod_key)
+        .join("d")
+}
 pub fn metric_pod_hour_path(pod_key: &str, period_month: &str) -> PathBuf {
     metric_path(EntityType::Pod, pod_key, MetricGranularity::Hour, period_month)
 }
-
+pub fn metric_pod_hour_dir(pod_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("pod")
+        .join(pod_key)
+        .join("h")
+}
 pub fn metric_pod_minute_path(pod_key: &str, period_day: &str) -> PathBuf {
     metric_path(EntityType::Pod, pod_key, MetricGranularity::Minute, period_day)
 }
-
+pub fn metric_pod_minute_dir(pod_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("pod")
+        .join(pod_key)
+        .join("m")
+}
 // Convenience wrappers for nodes
 
 pub fn metric_node_root_path() -> PathBuf {
@@ -145,14 +187,36 @@ pub fn metric_node_root_path() -> PathBuf {
 pub fn metric_node_rustcost_base_path(node_key: &str) -> PathBuf {
     metric_rustcost_base_path(EntityType::Node, node_key)
 }
+
 pub fn metric_node_day_path(node_key: &str, period_year: &str) -> PathBuf {
     metric_path(EntityType::Node, node_key, MetricGranularity::Day, period_year)
+}
+pub fn metric_pod_node_day_dir(pod_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("node")
+        .join(pod_key)
+        .join("d")
 }
 
 pub fn metric_node_hour_path(node_key: &str, period_month: &str) -> PathBuf {
     metric_path(EntityType::Node, node_key, MetricGranularity::Hour, period_month)
 }
+pub fn metric_pod_node_hour_dir(pod_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("node")
+        .join(pod_key)
+        .join("h")
+}
 
 pub fn metric_node_minute_path(node_key: &str, period_day: &str) -> PathBuf {
     metric_path(EntityType::Node, node_key, MetricGranularity::Minute, period_day)
+}
+pub fn metric_pod_node_minute_dir(pod_key: &str) -> PathBuf {
+    get_rustcost_base_path()
+        .join("metric")
+        .join("node")
+        .join(pod_key)
+        .join("m")
 }

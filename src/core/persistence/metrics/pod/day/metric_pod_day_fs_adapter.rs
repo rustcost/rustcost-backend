@@ -205,6 +205,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodDayFsAdapter {
         let cutoff_month = before.format("%Y-%m").to_string();
 
         let paths = [
+            //TODO
             format!("data/metric/pod/{pod_uid}/m/{cutoff_month}.rcd"),
         ];
 

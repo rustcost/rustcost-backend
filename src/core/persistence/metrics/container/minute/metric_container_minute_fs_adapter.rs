@@ -108,6 +108,7 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerMinuteFsAdapt
     }
 
     fn cleanup_old(&self, container_key: &str, before: DateTime<Utc>) -> Result<()> {
+        //TODO
         let metrics_dir = Path::new("data/metric/containers").join(container_key).join("m");
 
         if !metrics_dir.exists() {

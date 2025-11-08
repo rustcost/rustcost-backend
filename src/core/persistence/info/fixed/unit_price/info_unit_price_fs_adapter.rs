@@ -6,9 +6,7 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-
-/// Location of the persisted unit price file.
-const PATH: &str = "data/info/unit_price.rci";
+use crate::core::persistence::storage_path::info_unit_price_path;
 
 /// File-based adapter for reading and writing [`InfoUnitPriceEntity`] data.
 ///
@@ -19,11 +17,13 @@ impl InfoFixedFsAdapterTrait<InfoUnitPriceEntity> for InfoUnitPriceFsAdapter {
     /// Reads the unit price configuration from disk.
     /// Returns default values if the file does not exist.
     fn read(&self) -> Result<InfoUnitPriceEntity> {
-        if !Path::new(PATH).exists() {
+        let path = info_unit_price_path();
+
+        if !path.exists() {
             return Ok(InfoUnitPriceEntity::default());
         }
 
-        let file = File::open(PATH).context("Failed to open unit price file")?;
+        let file = File::open(&path).context("Failed to open unit price file")?;
         let reader = BufReader::new(file);
         let mut entity = InfoUnitPriceEntity::default();
 
@@ -71,8 +71,10 @@ impl InfoFixedFsAdapterTrait<InfoUnitPriceEntity> for InfoUnitPriceFsAdapter {
     }
 
     fn delete(&self) -> Result<()> {
-        if Path::new(PATH).exists() {
-            fs::remove_file(PATH).context("Failed to delete unit price file")?;
+        let path = info_unit_price_path();
+
+        if path.exists() {
+            fs::remove_file(&path).context("Failed to delete unit price file")?;
         }
         Ok(())
     }
@@ -81,11 +83,13 @@ impl InfoFixedFsAdapterTrait<InfoUnitPriceEntity> for InfoUnitPriceFsAdapter {
 impl InfoUnitPriceFsAdapter {
     /// Writes the unit price configuration to disk atomically.
     fn write(&self, data: &InfoUnitPriceEntity) -> Result<()> {
-        if let Some(dir) = Path::new(PATH).parent() {
+        let path = info_unit_price_path();
+
+        if let Some(dir) = path.parent() {
             fs::create_dir_all(dir).context("Failed to create unit price directory")?;
         }
 
-        let tmp_path = format!("{PATH}.tmp");
+        let tmp_path = path.join(".tmp");
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         // CPU
@@ -109,7 +113,7 @@ impl InfoUnitPriceFsAdapter {
         writeln!(f, "network_external_gb:{}", data.network_external_gb)?;
 
         f.flush()?;
-        fs::rename(&tmp_path, PATH).context("Failed to finalize unit price file")?;
+        fs::rename(&tmp_path, &path).context("Failed to finalize unit price file")?;
         Ok(())
     }
 }

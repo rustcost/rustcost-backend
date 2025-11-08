@@ -2,6 +2,8 @@
 
 use reqwest::{Certificate, Client};
 use std::{env, fs};
+use crate::core::persistence::storage_path::get_rustcost_base_path;
+use std::path::Path;
 
 /// Reads the service account token (mounted in pod)
 pub fn read_token() -> anyhow::Result<String> {
@@ -21,7 +23,8 @@ pub fn build_client() -> anyhow::Result<Client> {
     let ca = Certificate::from_pem(&pem)?;
 
     // Determine if we're running locally (Windows / dev)
-    let is_local = rustcost_ca_path.ends_with("data/ca.crt");
+    let ca_path = get_rustcost_base_path().join("ca.crt");
+    let is_local = Path::new(&rustcost_ca_path) == ca_path;
 
     let builder = Client::builder().add_root_certificate(ca);
 

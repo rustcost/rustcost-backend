@@ -6,9 +6,7 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-
-/// Location of the persisted version file.
-const PATH: &str = "data/info/version.rci";
+use crate::core::persistence::storage_path::{info_unit_price_path, info_version_path};
 
 /// File-based FS_ADAPTER implementation for the `VersionInfo` entity.
 ///
@@ -21,11 +19,13 @@ impl InfoFixedFsAdapterTrait<InfoVersionEntity> for InfoVersionFsAdapter {
     /// Reads the version information file into memory.
     /// Returns default values if the file does not exist.
     fn read(&self) -> Result<InfoVersionEntity> {
-        if !Path::new(PATH).exists() {
+        let path = info_version_path();
+
+        if !path.exists() {
             return Ok(InfoVersionEntity::default());
         }
 
-        let file = File::open(PATH).context("Failed to open version file")?;
+        let file = File::open(&path).context("Failed to open version file")?;
         let reader = BufReader::new(file);
         let mut v = InfoVersionEntity::default();
 
@@ -62,8 +62,10 @@ impl InfoFixedFsAdapterTrait<InfoVersionEntity> for InfoVersionFsAdapter {
     }
 
     fn delete(&self) -> Result<()> {
-        if Path::new(PATH).exists() {
-            fs::remove_file(PATH).context("Failed to delete version file")?;
+        let path = info_version_path();
+
+        if path.exists() {
+            fs::remove_file(&path).context("Failed to delete version file")?;
         }
         Ok(())
     }
@@ -72,11 +74,12 @@ impl InfoFixedFsAdapterTrait<InfoVersionEntity> for InfoVersionFsAdapter {
 impl InfoVersionFsAdapter {
     /// Internal helper to atomically write the version file.
     fn write(&self, data: &InfoVersionEntity) -> Result<()> {
-        if let Some(dir) = Path::new(PATH).parent() {
+        let path = info_version_path();
+
+        if let Some(dir) = path.parent() {
             fs::create_dir_all(dir).context("Failed to create version directory")?;
         }
-
-        let tmp_path = format!("{PATH}.tmp");
+        let tmp_path = path.join(".tmp");
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         writeln!(f, "DATE:{}", data.date)?;
@@ -90,7 +93,7 @@ impl InfoVersionFsAdapter {
         writeln!(f, "PLATFORM:{}", data.platform)?;
         f.flush()?;
 
-        fs::rename(&tmp_path, PATH).context("Failed to finalize version file")?;
+        fs::rename(&tmp_path, &path).context("Failed to finalize version file")?;
         Ok(())
     }
 }

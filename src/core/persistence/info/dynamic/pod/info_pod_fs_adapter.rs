@@ -148,6 +148,7 @@ impl InfoPodFsAdapter {
 
     /// Writes the info.rci file atomically.
     fn write(&self, pod_uid: &str, data: &InfoPodEntity) -> Result<()> {
+        //TODO
         let dir = format!("data/info/pod/{}", pod_uid);
         fs::create_dir_all(&dir).context("Failed to create pod info directory")?;
 

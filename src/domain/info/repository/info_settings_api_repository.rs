@@ -1,7 +1,3 @@
-use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
-use crate::core::persistence::info::dynamic::container::info_container_collector_repository_trait::InfoContainerCollectorRepository;
-use crate::core::persistence::info::dynamic::container::info_container_entity::InfoContainerEntity;
-use crate::core::persistence::info::dynamic::container::info_container_fs_adapter::InfoContainerFsAdapter;
 use anyhow::Result;
 use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use crate::core::persistence::info::fixed::setting::info_setting_api_repository_trait::InfoSettingApiRepository;
