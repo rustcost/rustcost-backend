@@ -5,12 +5,12 @@ use anyhow::{ Result};
 use chrono::{Duration, Utc};
 use tracing::{debug, error};
 
-use crate::core::persistence::metrics::pod::day::metric_pod_day_fs_adapter::MetricPodDayFsAdapter;
-use crate::core::persistence::metrics::pod::day::metric_pod_day_retention_repository_traits::MetricPodDayRetentionRepository;
-use crate::core::persistence::metrics::pod::hour::metric_pod_hour_fs_adapter::MetricPodHourFsAdapter;
-use crate::core::persistence::metrics::pod::hour::metric_pod_hour_retention_repository_traits::MetricPodHourRetentionRepository;
-use crate::core::persistence::metrics::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
-use crate::core::persistence::metrics::pod::minute::metric_pod_minute_retention_repository_traits::MetricPodMinuteRetentionRepository;
+use crate::core::persistence::metrics::k8s::pod::day::metric_pod_day_fs_adapter::MetricPodDayFsAdapter;
+use crate::core::persistence::metrics::k8s::pod::day::metric_pod_day_retention_repository_traits::MetricPodDayRetentionRepository;
+use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_fs_adapter::MetricPodHourFsAdapter;
+use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_retention_repository_traits::MetricPodHourRetentionRepository;
+use crate::core::persistence::metrics::k8s::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
+use crate::core::persistence::metrics::k8s::pod::minute::metric_pod_minute_retention_repository_traits::MetricPodMinuteRetentionRepository;
 use crate::core::persistence::storage_path::metric_pod_root_path;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_day_repository::MetricPodDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_hour_repository::MetricPodHourRetentionRepositoryImpl;

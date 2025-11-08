@@ -4,7 +4,7 @@ use std::path::{PathBuf};
 use anyhow::{Context, Result};
 use chrono::{Duration, Timelike, Utc};
 
-use crate::core::persistence::metrics::container::day::{
+use crate::core::persistence::metrics::k8s::container::day::{
     metric_container_day_fs_adapter::MetricContainerDayFsAdapter,
     metric_container_day_processor_repository_trait::MetricContainerDayProcessorRepository,
 };

@@ -1,8 +1,8 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
-use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
+use crate::core::persistence::metrics::k8s::pod::metric_pod_entity::MetricPodEntity;
 use chrono::{DateTime, Utc};
-use crate::core::persistence::metrics::pod::hour::metric_pod_hour_fs_adapter::MetricPodHourFsAdapter;
-use crate::core::persistence::metrics::pod::hour::metric_pod_hour_retention_repository_traits::MetricPodHourRetentionRepository;
+use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_fs_adapter::MetricPodHourFsAdapter;
+use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_retention_repository_traits::MetricPodHourRetentionRepository;
 
 pub struct MetricPodHourRetentionRepositoryImpl {
     pub adapter: MetricPodHourFsAdapter,

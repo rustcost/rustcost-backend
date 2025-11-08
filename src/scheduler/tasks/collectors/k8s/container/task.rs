@@ -1,6 +1,6 @@
 use crate::core::persistence::info::dynamic::container::info_container_collector_repository_trait::InfoContainerCollectorRepository;
-use crate::core::persistence::metrics::container::minute::metric_container_minute_collector_repository_trait::MetricContainerMinuteCollectorRepository;
-use crate::core::persistence::metrics::container::minute::metric_container_minute_fs_adapter::MetricContainerMinuteFsAdapter;
+use crate::core::persistence::metrics::k8s::container::minute::metric_container_minute_collector_repository_trait::MetricContainerMinuteCollectorRepository;
+use crate::core::persistence::metrics::k8s::container::minute::metric_container_minute_fs_adapter::MetricContainerMinuteFsAdapter;
 use crate::scheduler::tasks::collectors::k8s::container::metric_container_minute_collector_repository::MetricContainerMinuteCollectorRepositoryImpl;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
 use anyhow::Result;

@@ -1,7 +1,7 @@
 /* Maps K8s API objects → internal models */
 
 use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
-use crate::core::persistence::metrics::node::metric_node_entity::MetricNodeEntity;
+use crate::core::persistence::metrics::k8s::node::metric_node_entity::MetricNodeEntity;
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::Node;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, Summary};
 use anyhow::Result;

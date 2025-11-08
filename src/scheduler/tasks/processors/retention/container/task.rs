@@ -5,12 +5,12 @@ use anyhow::{ Result};
 use chrono::{Duration, Utc};
 use tracing::{debug, error};
 
-use crate::core::persistence::metrics::container::day::metric_container_day_fs_adapter::MetricContainerDayFsAdapter;
-use crate::core::persistence::metrics::container::day::metric_container_day_retention_repository_traits::MetricContainerDayRetentionRepository;
-use crate::core::persistence::metrics::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
-use crate::core::persistence::metrics::container::hour::metric_container_hour_retention_repository_traits::MetricContainerHourRetentionRepository;
-use crate::core::persistence::metrics::container::minute::metric_container_minute_fs_adapter::MetricContainerMinuteFsAdapter;
-use crate::core::persistence::metrics::container::minute::metric_container_minute_retention_repository_traits::MetricContainerMinuteRetentionRepository;
+use crate::core::persistence::metrics::k8s::container::day::metric_container_day_fs_adapter::MetricContainerDayFsAdapter;
+use crate::core::persistence::metrics::k8s::container::day::metric_container_day_retention_repository_traits::MetricContainerDayRetentionRepository;
+use crate::core::persistence::metrics::k8s::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
+use crate::core::persistence::metrics::k8s::container::hour::metric_container_hour_retention_repository_traits::MetricContainerHourRetentionRepository;
+use crate::core::persistence::metrics::k8s::container::minute::metric_container_minute_fs_adapter::MetricContainerMinuteFsAdapter;
+use crate::core::persistence::metrics::k8s::container::minute::metric_container_minute_retention_repository_traits::MetricContainerMinuteRetentionRepository;
 use crate::core::persistence::storage_path::metric_container_root_path;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_day_repository::MetricContainerDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_hour_repository::MetricContainerHourRetentionRepositoryImpl;

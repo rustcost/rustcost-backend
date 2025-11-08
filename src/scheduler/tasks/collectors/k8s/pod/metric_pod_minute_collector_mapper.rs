@@ -1,4 +1,4 @@
-use crate::core::persistence::metrics::pod::metric_pod_entity::MetricPodEntity;
+use crate::core::persistence::metrics::k8s::pod::metric_pod_entity::MetricPodEntity;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, PodSummary, VolumeStats};
 use chrono::Utc;
 

@@ -1,8 +1,8 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
-use crate::core::persistence::metrics::container::hour::metric_container_hour_processor_repository_trait::MetricContainerHourProcessorRepository;
-use crate::core::persistence::metrics::container::metric_container_entity::MetricContainerEntity;
+use crate::core::persistence::metrics::k8s::container::hour::metric_container_hour_processor_repository_trait::MetricContainerHourProcessorRepository;
+use crate::core::persistence::metrics::k8s::container::metric_container_entity::MetricContainerEntity;
 use chrono::{DateTime, Utc};
-use crate::core::persistence::metrics::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
+use crate::core::persistence::metrics::k8s::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
 
 pub struct MetricContainerHourProcessorRepositoryImpl {
     pub adapter: MetricContainerHourFsAdapter,

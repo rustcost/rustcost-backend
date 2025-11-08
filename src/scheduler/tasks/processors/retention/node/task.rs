@@ -5,12 +5,12 @@ use anyhow::{Result};
 use chrono::{Duration, Utc};
 use tracing::{debug, error};
 
-use crate::core::persistence::metrics::node::day::metric_node_day_fs_adapter::MetricNodeDayFsAdapter;
-use crate::core::persistence::metrics::node::day::metric_node_day_retention_repository_traits::MetricNodeDayRetentionRepository;
-use crate::core::persistence::metrics::node::hour::metric_node_hour_fs_adapter::MetricNodeHourFsAdapter;
-use crate::core::persistence::metrics::node::hour::metric_node_hour_retention_repository_traits::MetricNodeHourRetentionRepository;
-use crate::core::persistence::metrics::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
-use crate::core::persistence::metrics::node::minute::metric_node_minute_retention_repository_traits::MetricNodeMinuteRetentionRepository;
+use crate::core::persistence::metrics::k8s::node::day::metric_node_day_fs_adapter::MetricNodeDayFsAdapter;
+use crate::core::persistence::metrics::k8s::node::day::metric_node_day_retention_repository_traits::MetricNodeDayRetentionRepository;
+use crate::core::persistence::metrics::k8s::node::hour::metric_node_hour_fs_adapter::MetricNodeHourFsAdapter;
+use crate::core::persistence::metrics::k8s::node::hour::metric_node_hour_retention_repository_traits::MetricNodeHourRetentionRepository;
+use crate::core::persistence::metrics::k8s::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
+use crate::core::persistence::metrics::k8s::node::minute::metric_node_minute_retention_repository_traits::MetricNodeMinuteRetentionRepository;
 use crate::core::persistence::storage_path::metric_node_root_path;
 use crate::scheduler::tasks::processors::retention::node::metric_processor_retention_node_day_repository::MetricNodeDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::node::metric_processor_retention_node_hour_repository::MetricNodeHourRetentionRepositoryImpl;
