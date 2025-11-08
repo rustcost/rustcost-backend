@@ -1,10 +1,16 @@
 use std::{env, fs, path::Path};
+use std::path::PathBuf;
 use tracing_appender::rolling;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use crate::core::persistence::storage_path::get_rustcost_base_path;
 
 pub fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
     // Read log directory from env or fallback
-    let rustcost_log_dir = env::var("RUSTCOST_LOG_DIR").unwrap_or_else(|_| "data/logs".to_string());
+
+    let rustcost_log_dir = env::var("RUSTCOST_LOG_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| get_rustcost_base_path().join("logs"));
+
     let rustcost_log_level = env::var("RUSTCOST_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
     if !Path::new(&rustcost_log_dir).exists() {
@@ -30,7 +36,7 @@ pub fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
 
     tracing::info!(
         "✅ Tracing initialized — daily logs in {}/app.log.YYYY-MM-DD",
-        rustcost_log_dir
+        rustcost_log_dir.display()
     );
 
     guard

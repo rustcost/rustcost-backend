@@ -4,9 +4,8 @@ use anyhow::{Context, Result};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
-    path::Path,
 };
-use crate::core::persistence::storage_path::{info_unit_price_path, info_version_path};
+use crate::core::persistence::storage_path::{info_version_path};
 
 /// File-based FS_ADAPTER implementation for the `VersionInfo` entity.
 ///

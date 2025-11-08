@@ -5,7 +5,6 @@ use chrono::{DateTime, Utc};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
-    path::Path,
 };
 use crate::core::persistence::storage_path::info_setting_path;
 

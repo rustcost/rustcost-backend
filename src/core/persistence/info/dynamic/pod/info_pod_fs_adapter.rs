@@ -7,6 +7,7 @@ use std::{
     path::Path,
 };
 use crate::core::persistence::info::path::{info_pod_dir_path, info_pod_file_path};
+use crate::core::persistence::metrics::k8s::path::metric_k8s_pod_key_dir_path;
 
 /// File-based FS adapter for `InfoPodEntity`.
 ///
@@ -148,20 +149,20 @@ impl InfoPodFsAdapter {
 
     /// Writes the info.rci file atomically.
     fn write(&self, pod_uid: &str, data: &InfoPodEntity) -> Result<()> {
-        //TODO
-        let dir = format!("data/info/pod/{}", pod_uid);
+        let dir = metric_k8s_pod_key_dir_path(pod_uid);
         fs::create_dir_all(&dir).context("Failed to create pod info directory")?;
 
-        let tmp_path = format!("{}/info.rci.tmp", dir);
-        let final_path = format!("{}/info.rci", dir);
+        let tmp_path = dir.join("info.rci.tmp");
+        let final_path = dir.join("info.rci");
+
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         macro_rules! write_field {
-            ($key:expr, $val:expr) => {
-                let val_str = $val.clone().map_or(String::new(), |v| v.to_string());
-                writeln!(f, "{}:{}", $key, val_str)?;
-            };
-        }
+        ($key:expr, $val:expr) => {
+            let val_str = $val.clone().map_or(String::new(), |v| v.to_string());
+            writeln!(f, "{}:{}", $key, val_str)?;
+        };
+    }
 
         // Identity
         write_field!("POD_NAME", data.pod_name);

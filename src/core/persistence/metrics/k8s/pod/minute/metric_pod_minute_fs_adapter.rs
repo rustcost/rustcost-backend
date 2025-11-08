@@ -12,8 +12,6 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::k8s::path::{
-    metric_k8s_pod_dir_path,
-    metric_k8s_pod_key_dir_path,
     metric_k8s_pod_key_minute_file_path,
     metric_k8s_pod_key_minute_dir_path,
 };

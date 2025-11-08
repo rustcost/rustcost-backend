@@ -4,7 +4,6 @@ use anyhow::{Context, Result};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
-    path::Path,
 };
 use crate::core::persistence::storage_path::info_unit_price_path;
 
