@@ -1,12 +1,12 @@
-use crate::core::kube_client::api_server;
 use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::NodeList;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;
 use anyhow::{Result};
 use reqwest::Client;
 use tracing::debug;
+use crate::core::kube_client::k8s_api_server;
 
 pub async fn fetch_nodes(token: &str, client: &Client) -> Result<NodeList> {
-    let nodes_url = format!("{}/api/v1/nodes", api_server());
+    let nodes_url = format!("{}/api/v1/nodes", k8s_api_server());
     let node_list: NodeList = client
         .get(&nodes_url)
         .bearer_auth(token)
@@ -21,7 +21,7 @@ pub async fn fetch_nodes(token: &str, client: &Client) -> Result<NodeList> {
 }
 
 pub async fn fetch_node_summary(token: &str, client: &Client, node_name: &str) -> Result<Summary> {
-    let url = format!("{}/api/v1/nodes/{}/proxy/stats/summary", api_server(), node_name);
+    let url = format!("{}/api/v1/nodes/{}/proxy/stats/summary", k8s_api_server(), node_name);
     let resp = client.get(&url)
         .bearer_auth(token)
         .send()

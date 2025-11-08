@@ -2,17 +2,17 @@
 
 use std::{env, path::PathBuf};
 
-/// Returns the base data path, using `BASE_PATH` env var if set.
+/// Returns the base data path, using `RUSTCOST_BASE_PATH` env var if set.
 /// Defaults to `data/` if not configured.
-pub fn get_base_path() -> PathBuf {
-    env::var("BASE_PATH")
+pub fn get_rustcost_base_path() -> PathBuf {
+    env::var("RUSTCOST_BASE_PATH")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("data"))
 }
 
 /// Base helper for paths under `info/`.
 fn info_path<S: AsRef<str>>(sub_path: S) -> PathBuf {
-    get_base_path().join("info").join(sub_path.as_ref())
+    get_rustcost_base_path().join("info").join(sub_path.as_ref())
 }
 
 /// Type of entity used in persistence paths.
@@ -87,7 +87,7 @@ pub fn info_node_file_path(node_key: &str) -> PathBuf {
 
 /// Metric file paths
 pub fn metric_path(entity: EntityType, key: &str, granularity: MetricGranularity, time_key: &str) -> PathBuf {
-    get_base_path().join("metric").join(format!(
+    get_rustcost_base_path().join("metric").join(format!(
         "{}/{}/{}/{}.rcd",
         entity.as_dir(),
         key,
@@ -95,16 +95,16 @@ pub fn metric_path(entity: EntityType, key: &str, granularity: MetricGranularity
         time_key
     ))
 }
-pub fn metric_base_path(entity: EntityType, key: &str) -> PathBuf {
-    get_base_path().join("metric").join(format!("{}/{}", entity.as_dir(), key))
+pub fn metric_rustcost_base_path(entity: EntityType, key: &str) -> PathBuf {
+    get_rustcost_base_path().join("metric").join(format!("{}/{}", entity.as_dir(), key))
 }
 
 // Convenience wrappers for containers
 pub fn metric_container_root_path() -> PathBuf {
-    get_base_path().join("metric").join( EntityType::Container.as_dir())
+    get_rustcost_base_path().join("metric").join( EntityType::Container.as_dir())
 }
-pub fn metric_container_base_path(container_key: &str) -> PathBuf {
-    metric_base_path(EntityType::Container, container_key)
+pub fn metric_container_rustcost_base_path(container_key: &str) -> PathBuf {
+    metric_rustcost_base_path(EntityType::Container, container_key)
 }
 pub fn metric_container_day_path(container_key: &str, period_year: &str) -> PathBuf {
     metric_path(EntityType::Container, container_key, MetricGranularity::Day, period_year)
@@ -120,10 +120,10 @@ pub fn metric_container_minute_path(container_key: &str, period_day: &str) -> Pa
 
 // Convenience wrappers for pods
 pub fn metric_pod_root_path() -> PathBuf {
-    get_base_path().join("metric").join( EntityType::Pod.as_dir())
+    get_rustcost_base_path().join("metric").join( EntityType::Pod.as_dir())
 }
-pub fn metric_pod_base_path(pod_key: &str) -> PathBuf {
-    metric_base_path(EntityType::Pod, pod_key)
+pub fn metric_pod_rustcost_base_path(pod_key: &str) -> PathBuf {
+    metric_rustcost_base_path(EntityType::Pod, pod_key)
 }
 pub fn metric_pod_day_path(pod_key: &str, period_year: &str) -> PathBuf {
     metric_path(EntityType::Pod, pod_key, MetricGranularity::Day, period_year)
@@ -140,10 +140,10 @@ pub fn metric_pod_minute_path(pod_key: &str, period_day: &str) -> PathBuf {
 // Convenience wrappers for nodes
 
 pub fn metric_node_root_path() -> PathBuf {
-    get_base_path().join("metric").join( EntityType::Node.as_dir())
+    get_rustcost_base_path().join("metric").join( EntityType::Node.as_dir())
 }
-pub fn metric_node_base_path(node_key: &str) -> PathBuf {
-    metric_base_path(EntityType::Node, node_key)
+pub fn metric_node_rustcost_base_path(node_key: &str) -> PathBuf {
+    metric_rustcost_base_path(EntityType::Node, node_key)
 }
 pub fn metric_node_day_path(node_key: &str, period_year: &str) -> PathBuf {
     metric_path(EntityType::Node, node_key, MetricGranularity::Day, period_year)

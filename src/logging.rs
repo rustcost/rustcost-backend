@@ -4,15 +4,15 @@ use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 pub fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
     // Read log directory from env or fallback
-    let log_dir = env::var("LOG_DIR").unwrap_or_else(|_| "data/logs".to_string());
-    let log_level = env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
+    let rustcost_log_dir = env::var("RUSTCOST_LOG_DIR").unwrap_or_else(|_| "data/logs".to_string());
+    let rustcost_log_level = env::var("RUSTCOST_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
-    if !Path::new(&log_dir).exists() {
-        fs::create_dir_all(&log_dir).expect("Failed to create log directory");
+    if !Path::new(&rustcost_log_dir).exists() {
+        fs::create_dir_all(&rustcost_log_dir).expect("Failed to create log directory");
     }
 
     // Daily rotation
-    let file_appender = rolling::daily(&log_dir, "app.log");
+    let file_appender = rolling::daily(&rustcost_log_dir, "app.log");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
 
     let fmt_layer = fmt::layer()
@@ -21,7 +21,7 @@ pub fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
         .with_level(true)
         .with_ansi(false);
 
-    let filter_layer = EnvFilter::new(log_level);
+    let filter_layer = EnvFilter::new(rustcost_log_level);
 
     tracing_subscriber::registry()
         .with(filter_layer)
@@ -30,7 +30,7 @@ pub fn init_tracing() -> tracing_appender::non_blocking::WorkerGuard {
 
     tracing::info!(
         "✅ Tracing initialized — daily logs in {}/app.log.YYYY-MM-DD",
-        log_dir
+        rustcost_log_dir
     );
 
     guard

@@ -1,4 +1,4 @@
-use super::info_setting_entity::InfoSettingEntity;
+use super::info_setting_entity::{InfoSettingEntity, RuntimeType};
 use crate::core::persistence::info::fixed::info_fixed_fs_adapter_trait::InfoFixedFsAdapterTrait;
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
@@ -54,8 +54,6 @@ impl InfoFixedFsAdapterTrait<InfoSettingEntity> for InfoSettingFsAdapter {
                     // === Metrics ===
                     "SCRAPE_INTERVAL_SEC" => s.scrape_interval_sec = val.parse().unwrap_or(s.scrape_interval_sec),
                     "METRICS_BATCH_SIZE" => s.metrics_batch_size = val.parse().unwrap_or(s.metrics_batch_size),
-                    "ENABLE_GPU_METRICS" => s.enable_gpu_metrics = val.eq_ignore_ascii_case("true"),
-                    "ENABLE_NETWORK_METRICS" => s.enable_network_metrics = val.eq_ignore_ascii_case("true"),
 
                     // === Alerts ===
                     "ENABLE_CLUSTER_HEALTH_ALERT" => s.enable_cluster_health_alert = val.eq_ignore_ascii_case("true"),
@@ -90,6 +88,37 @@ impl InfoFixedFsAdapterTrait<InfoSettingEntity> for InfoSettingFsAdapter {
                     }
                     "VERSION" => s.version = val.to_string(),
 
+                        "RUNTIME_TYPE" => s.runtime_type = match val.to_lowercase().as_str() {
+                        "docker" => RuntimeType::Docker,
+                        "containerd" => RuntimeType::Containerd,
+                        "baremetal" => RuntimeType::BareMetal,
+                        _ => RuntimeType::K8s,
+                        },
+                        "ENABLE_K8S_API" => s.enable_k8s_api = val == "true",
+                        "ENABLE_CONTAINER_EXPORTER" => s.enable_container_exporter = val == "true",
+                        "ENABLE_GPU_EXPORTER" => s.enable_gpu_exporter = val == "true",
+
+                        "GPU_EXPORTER_URLS" => {
+                        s.gpu_exporter_urls = val
+                        .split(',')
+                        .map(|v| v.trim().to_string())
+                        .filter(|v| !v.is_empty())
+                        .collect();
+                        }
+                        "CONTAINER_EXPORTER_URLS" => {
+                        s.container_exporter_urls = val
+                        .split(',')
+                        .map(|v| v.trim().to_string())
+                        .filter(|v| !v.is_empty())
+                        .collect();
+                        }
+                        "K8S_API_URL" => {
+                        s.k8s_api_url = if val.trim().is_empty() {
+                        None
+                        } else {
+                        Some(val.to_string())
+                        };
+                        }
                     _ => {}
                 }
             }
@@ -136,8 +165,6 @@ impl InfoSettingFsAdapter {
         writeln!(f, "COMPRESSION_ENABLED:{}", data.compression_enabled)?;
         writeln!(f, "SCRAPE_INTERVAL_SEC:{}", data.scrape_interval_sec)?;
         writeln!(f, "METRICS_BATCH_SIZE:{}", data.metrics_batch_size)?;
-        writeln!(f, "ENABLE_GPU_METRICS:{}", data.enable_gpu_metrics)?;
-        writeln!(f, "ENABLE_NETWORK_METRICS:{}", data.enable_network_metrics)?;
         writeln!(f, "ENABLE_CLUSTER_HEALTH_ALERT:{}", data.enable_cluster_health_alert)?;
         writeln!(f, "ENABLE_RUSTCOST_HEALTH_ALERT:{}", data.enable_rustcost_health_alert)?;
         writeln!(f, "GLOBAL_ALERT_SUBJECT:{}", data.global_alert_subject)?;
@@ -151,6 +178,18 @@ impl InfoSettingFsAdapter {
         writeln!(f, "CREATED_AT:{}", data.created_at.to_rfc3339())?;
         writeln!(f, "UPDATED_AT:{}", data.updated_at.to_rfc3339())?;
         writeln!(f, "VERSION:{}", data.version)?;
+        writeln!(f, "RUNTIME_TYPE:{:?}", data.runtime_type)?;
+        writeln!(f, "ENABLE_K8S_API:{}", data.enable_k8s_api)?;
+        writeln!(f, "ENABLE_CONTAINER_EXPORTER:{}", data.enable_container_exporter)?;
+        writeln!(f, "ENABLE_GPU_EXPORTER:{}", data.enable_gpu_exporter)?;
+        writeln!(f, "GPU_EXPORTER_URLS:{}", data.gpu_exporter_urls.join(", "))?;
+        writeln!(f, "CONTAINER_EXPORTER_URLS:{}", data.container_exporter_urls.join(", "))?;
+        writeln!(
+            f,
+            "K8S_API_URL:{}",
+            data.k8s_api_url.clone().unwrap_or_default()
+        )?;
+
         f.flush()?;
 
         fs::rename(&tmp_path, PATH).context("Failed to finalize settings file")?;

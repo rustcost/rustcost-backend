@@ -38,7 +38,7 @@ async fn run_server(app_config: &crate::config::Config) {
     let app = app_router();
     let address = format!("{}:{}", app_config.server_host(), app_config.server_port());
     let socket_addr: SocketAddr = address.parse().expect("Invalid socket address");
-    let debug_mode = std::env::var("DEBUG_MODE")
+    let rustcost_debug_mode = std::env::var("RUSTCOST_DEBUG_MODE")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false);
 
@@ -51,7 +51,7 @@ async fn run_server(app_config: &crate::config::Config) {
     // Keep the sender ALIVE for whole function lifetime
     let (shutdown_tx, mut shutdown_rx) = broadcast::channel::<()>(16);
 
-    if debug_mode {
+    if rustcost_debug_mode {
         let sched_rx = shutdown_rx.resubscribe();
         // run_minute_loop(&mut broadcast::channel::<()>(1).1).await;
         // run_hour_loop(&mut broadcast::channel::<()>(5).1).await;

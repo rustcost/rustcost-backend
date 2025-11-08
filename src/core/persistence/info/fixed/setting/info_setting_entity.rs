@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::env;
 
 /// Global configuration for RustCost.
 ///
@@ -51,12 +52,6 @@ pub struct InfoSettingEntity {
     /// Number of metrics batched together when written to disk.
     pub metrics_batch_size: u32,
 
-    /// Collect GPU metrics (if available).
-    pub enable_gpu_metrics: bool,
-
-    /// Collect network-related metrics.
-    pub enable_network_metrics: bool,
-
     // ===== Alerts & Notifications =====
     /// Enable cluster-level health monitoring alerts.
     pub enable_cluster_health_alert: bool,
@@ -99,6 +94,17 @@ pub struct InfoSettingEntity {
 
     /// Version identifier for the configuration format.
     pub version: String,
+
+
+    // ===== Runtime =====
+    pub runtime_type: RuntimeType,
+    pub enable_k8s_api: bool,
+    pub enable_container_exporter: bool,
+    pub enable_gpu_exporter: bool,
+
+    pub gpu_exporter_urls: Vec<String>,
+    pub container_exporter_urls: Vec<String>,
+    pub k8s_api_url: Option<String>,
 }
 
 impl Default for InfoSettingEntity {
@@ -123,8 +129,6 @@ impl Default for InfoSettingEntity {
             // --- Metrics ---
             scrape_interval_sec: 60,
             metrics_batch_size: 500,
-            enable_gpu_metrics: false,
-            enable_network_metrics: true,
 
             // --- Alerts ---
             enable_cluster_health_alert: false,
@@ -144,6 +148,62 @@ impl Default for InfoSettingEntity {
             created_at: now,
             updated_at: now,
             version: "1.0.0".into(),
+
+            // --- Runtime ---
+            runtime_type: RuntimeType::default(),
+
+            enable_k8s_api: env::var("RUSTCOST_ENABLE_K8S_API")
+                .map(|v| v == "true")
+                .unwrap_or(true),
+
+            enable_container_exporter: env::var("RUSTCOST_ENABLE_CONTAINER_EXPORTER")
+                .map(|v| v == "true")
+                .unwrap_or(true),
+
+            enable_gpu_exporter: env::var("RUSTCOST_ENABLE_GPU_EXPORTER")
+                .map(|v| v == "true")
+                .unwrap_or(false),
+
+            gpu_exporter_urls: env::var("RUSTCOST_GPU_EXPORTER_URLS")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+                .map(|v| v.split(',').map(|s| s.trim().to_string()).collect())
+                .unwrap_or_else(Vec::new),
+
+            container_exporter_urls: env::var("RUSTCOST_CONTAINER_EXPORTER_URLS")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+                .map(|v| v.split(',').map(|s| s.trim().to_string()).collect())
+                .unwrap_or_else(Vec::new),
+
+            k8s_api_url: env::var("RUSTCOST_K8S_API_URL").ok(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RuntimeType {
+    #[serde(rename = "k8s")]
+    K8s,
+    #[serde(rename = "docker")]
+    Docker,
+    #[serde(rename = "containerd")]
+    Containerd,
+    #[serde(rename = "baremetal")]
+    BareMetal,
+}
+
+impl Default for RuntimeType {
+    fn default() -> Self {
+        match env::var("RUSTCOST_RUNTIME_TYPE")
+            .unwrap_or_else(|_| "k8s".to_string())
+            .to_lowercase()
+            .as_str()
+        {
+            "docker" => RuntimeType::Docker,
+            "containerd" => RuntimeType::Containerd,
+            "baremetal" => RuntimeType::BareMetal,
+            _ => RuntimeType::K8s,
         }
     }
 }

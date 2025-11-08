@@ -4,13 +4,13 @@ use chrono::Utc;
 use reqwest::Client;
 use std::env;
 
-/// Fetches Kubernetes version info from API_SERVER in .env
+/// Fetches Kubernetes version info from RUSTCOST_K8S_API_URL in .env
 pub async fn fetch_version() -> Result<InfoVersionEntity> {
     // Load from environment (dotenv or process env)
     dotenvy::dotenv().ok();
-    let api_server =
-        env::var("API_SERVER").unwrap_or_else(|_| "https://127.0.0.1:6443".to_string());
-    let url = format!("{}/version", api_server.trim_end_matches('/'));
+    let k8s_api_server =
+        env::var("RUSTCOST_K8S_API_URL").unwrap_or_else(|_| "https://127.0.0.1:6443".to_string());
+    let url = format!("{}/version", k8s_api_server.trim_end_matches('/'));
 
     let client = Client::builder()
         .danger_accept_invalid_certs(true) // for dev self-signed certs

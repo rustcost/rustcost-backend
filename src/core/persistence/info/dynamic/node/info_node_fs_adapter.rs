@@ -2,7 +2,7 @@ use super::info_node_entity::InfoNodeEntity;
 use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use anyhow::{Context, Result};
 use std::{fs::{self, File}, io, io::{BufRead, BufReader, Write}, path::Path};
-use crate::core::persistence::storage_path::{info_node_dir_path, info_node_file_path, metric_node_base_path};
+use crate::core::persistence::storage_path::{info_node_dir_path, info_node_file_path, metric_node_rustcost_base_path};
 
 /// File-based FS adapter for the `InfoNodeEntity`.
 ///
@@ -118,7 +118,7 @@ impl InfoNodeFsAdapter {
     /// Ensures the per-node data directories exist.
     /// Creates: data/metric/node/{node_name}/{m,h,d}
     pub fn create_node_dir_if_missing(node_name: &str) -> Result<()> {
-        let base = metric_node_base_path(node_name);
+        let base = metric_node_rustcost_base_path(node_name);
 
         for sub in ["d", "h", "m"] {
             let path = base.join(sub);
