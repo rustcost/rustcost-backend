@@ -11,7 +11,7 @@ use std::{
     path::Path,
 };
 use std::path::PathBuf;
-use crate::core::persistence::storage_path::metric_container_minute_path;
+use crate::core::persistence::metrics::k8s::path::metric_k8s_container_key_minute_file_path;
 
 /// Adapter for container minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
@@ -20,7 +20,7 @@ pub struct MetricContainerMinuteFsAdapter;
 impl MetricContainerMinuteFsAdapter {
     fn build_path(&self, container_key: &str) -> PathBuf {
         let date = Utc::now().format("%Y-%m-%d").to_string();
-        metric_container_minute_path(container_key, &date)
+        metric_k8s_container_key_minute_file_path(container_key, &date)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricContainerEntity> {

@@ -12,7 +12,7 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_fs_adapter::MetricPodHourFsAdapter;
-use crate::core::persistence::storage_path::metric_pod_day_path;
+use crate::core::persistence::metrics::k8s::path::metric_k8s_pod_key_day_file_path;
 
 /// Adapter for pod hour-level metrics.
 /// Responsible for appending hour samples to the filesystem and cleaning up old data.
@@ -21,7 +21,7 @@ pub struct MetricPodDayFsAdapter;
 impl MetricPodDayFsAdapter {
     fn build_path(&self, pod_key: &str) -> PathBuf {
         let year = Utc::now().format("%Y").to_string();
-        metric_pod_day_path(pod_key, &year)
+        metric_k8s_pod_key_day_file_path(pod_key, &year)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {

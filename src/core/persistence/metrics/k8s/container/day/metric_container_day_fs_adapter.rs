@@ -12,7 +12,10 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::k8s::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
-use crate::core::persistence::storage_path::{metric_container_day_dir, metric_container_day_path};
+use crate::core::persistence::metrics::k8s::path::{
+    metric_k8s_container_key_day_dir_path,
+    metric_k8s_container_key_day_file_path,
+};
 
 /// Adapter for container hour-level metrics.
 /// Responsible for appending hour samples to the filesystem and cleaning up old data.
@@ -21,7 +24,7 @@ pub struct MetricContainerDayFsAdapter;
 impl MetricContainerDayFsAdapter {
     fn build_path(&self, container_key: &str) -> PathBuf {
         let year = Utc::now().format("%Y").to_string();
-        metric_container_day_path(container_key, &year)
+        metric_k8s_container_key_day_file_path(container_key, &year)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricContainerEntity> {
@@ -176,7 +179,7 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerDayFsAdapter 
 
     fn cleanup_old(&self, container_key: &str, before: DateTime<Utc>) -> Result<()> {
         let cutoff_year: i32 = before.format("%Y").to_string().parse().unwrap_or(0);
-        let dir = metric_container_day_dir(container_key);
+        let dir = metric_k8s_container_key_day_dir_path(container_key);
 
         if !dir.exists() {
             return Ok(());

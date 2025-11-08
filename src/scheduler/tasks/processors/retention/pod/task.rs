@@ -11,7 +11,7 @@ use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_fs_adapte
 use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_retention_repository_traits::MetricPodHourRetentionRepository;
 use crate::core::persistence::metrics::k8s::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
 use crate::core::persistence::metrics::k8s::pod::minute::metric_pod_minute_retention_repository_traits::MetricPodMinuteRetentionRepository;
-use crate::core::persistence::storage_path::metric_pod_root_path;
+use crate::core::persistence::metrics::k8s::path::metric_k8s_pod_dir_path;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_day_repository::MetricPodDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_hour_repository::MetricPodHourRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::pod::metric_processor_retention_pod_minute_repository::MetricPodMinuteRetentionRepositoryImpl;
@@ -19,7 +19,7 @@ use crate::scheduler::tasks::processors::retention::pod::metric_processor_retent
 /// Runs retention cleanup for all pods across minute/hour/day metrics.
 pub async fn run() -> Result<()> {
 
-    let base_dir = metric_pod_root_path();
+    let base_dir = metric_k8s_pod_dir_path();
 
     if !base_dir.exists() {
         debug!("No pods directory found at {:?}", base_dir);

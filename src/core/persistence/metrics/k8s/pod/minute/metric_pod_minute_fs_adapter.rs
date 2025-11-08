@@ -11,7 +11,12 @@ use std::{
     path::Path,
 };
 use std::path::PathBuf;
-use crate::core::persistence::storage_path::{metric_pod_rustcost_base_path, metric_pod_minute_path, metric_pod_root_path};
+use crate::core::persistence::metrics::k8s::path::{
+    metric_k8s_pod_dir_path,
+    metric_k8s_pod_key_dir_path,
+    metric_k8s_pod_key_minute_file_path,
+    metric_k8s_pod_key_minute_dir_path,
+};
 
 /// Adapter for pod minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
@@ -20,7 +25,7 @@ pub struct MetricPodMinuteFsAdapter;
 impl MetricPodMinuteFsAdapter {
     fn build_path(&self, pod_uid: &str) -> PathBuf {
         let date = Utc::now().format("%Y-%m-%d").to_string();
-        metric_pod_minute_path(pod_uid, &date)
+        metric_k8s_pod_key_minute_file_path(pod_uid, &date)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {
@@ -125,7 +130,7 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
     }
 
     fn cleanup_old(&self, pod_uid: &str, before: DateTime<Utc>) -> Result<()> {
-        let metrics_dir = metric_pod_rustcost_base_path(pod_uid).join("m");
+        let metrics_dir = metric_k8s_pod_key_minute_dir_path(pod_uid);
 
         if !metrics_dir.exists() {
             return Ok(());

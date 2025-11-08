@@ -12,7 +12,7 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::k8s::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
-use crate::core::persistence::storage_path::metric_node_hour_path;
+use crate::core::persistence::metrics::k8s::path::metric_k8s_node_key_hour_file_path;
 
 /// Adapter for node minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
@@ -21,7 +21,7 @@ pub struct MetricNodeHourFsAdapter;
 impl MetricNodeHourFsAdapter {
     fn build_path(&self, node_name: &str) -> PathBuf {
         let month = Utc::now().format("%Y-%m").to_string();
-        metric_node_hour_path(node_name, &month)
+        metric_k8s_node_key_hour_file_path(node_name, &month)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricNodeEntity> {

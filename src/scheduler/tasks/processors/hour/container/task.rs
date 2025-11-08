@@ -10,7 +10,7 @@ use crate::core::persistence::metrics::k8s::container::hour::{
 };
 use crate::scheduler::tasks::processors::hour::container::metric_container_hour_processor_repository::MetricContainerHourProcessorRepositoryImpl;
 use tracing::{debug, error};
-use crate::core::persistence::storage_path::{metric_container_root_path};
+use crate::core::persistence::metrics::k8s::path::metric_k8s_container_dir_path;
 
 /// Aggregates all containers’ minute-level metrics into hour metrics.
 ///
@@ -18,7 +18,7 @@ use crate::core::persistence::storage_path::{metric_container_root_path};
 /// for each container directory, generating an hour summary.
 pub async fn process_container_minute_to_hour() -> Result<()> {
     let (start, end) = previous_hour_window()?;
-    let base_dir = metric_container_root_path();
+    let base_dir = metric_k8s_container_dir_path();
     if !base_dir.exists() {
         debug!("No containers directory found at {:?}", base_dir);
         return Ok(());

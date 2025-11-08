@@ -11,14 +11,14 @@ use crate::core::persistence::metrics::k8s::container::hour::metric_container_ho
 use crate::core::persistence::metrics::k8s::container::hour::metric_container_hour_retention_repository_traits::MetricContainerHourRetentionRepository;
 use crate::core::persistence::metrics::k8s::container::minute::metric_container_minute_fs_adapter::MetricContainerMinuteFsAdapter;
 use crate::core::persistence::metrics::k8s::container::minute::metric_container_minute_retention_repository_traits::MetricContainerMinuteRetentionRepository;
-use crate::core::persistence::storage_path::metric_container_root_path;
+use crate::core::persistence::metrics::k8s::path::metric_k8s_container_dir_path;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_day_repository::MetricContainerDayRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_hour_repository::MetricContainerHourRetentionRepositoryImpl;
 use crate::scheduler::tasks::processors::retention::container::metric_processor_retention_container_minute_repository::MetricContainerMinuteRetentionRepositoryImpl;
 
 /// Runs retention cleanup for all containers across minute/hour/day metrics.
 pub async fn run() -> Result<()> {
-    let base_dir = metric_container_root_path();
+    let base_dir = metric_k8s_container_dir_path();
 
     if !base_dir.exists() {
         debug!("No containers directory found at {:?}", base_dir);

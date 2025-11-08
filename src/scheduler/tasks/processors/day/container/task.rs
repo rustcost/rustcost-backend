@@ -9,7 +9,7 @@ use crate::core::persistence::metrics::k8s::container::day::{
     metric_container_day_processor_repository_trait::MetricContainerDayProcessorRepository,
 };
 use tracing::{debug, error};
-use crate::core::persistence::storage_path::metric_container_root_path;
+use crate::core::persistence::metrics::k8s::path::metric_k8s_container_dir_path;
 use crate::scheduler::tasks::processors::day::container::metric_container_hour_processor_repository::MetricContainerDayProcessorRepositoryImpl;
 
 /// Aggregates all containers’ minute-level metrics into dayly metrics.
@@ -18,7 +18,7 @@ use crate::scheduler::tasks::processors::day::container::metric_container_hour_p
 /// for each container directory, generating an dayly summary.
 pub async fn process_container_hour_to_day() -> Result<()> {
     let (start, end) = previous_day_window()?;
-    let base_dir = metric_container_root_path();
+    let base_dir = metric_k8s_container_dir_path();
 
     if !base_dir.exists() {
         debug!("No containers directory found at {:?}", base_dir);

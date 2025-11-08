@@ -6,7 +6,7 @@ use std::{
     io::{BufRead, BufReader, Write},
     path::Path,
 };
-use crate::core::persistence::storage_path::{info_container_dir_path, info_container_file_path};
+use crate::core::persistence::info::path::{info_container_dir_path, info_container_file_path};
 
 /// File-based FS adapter for `InfoContainerEntity`.
 ///
