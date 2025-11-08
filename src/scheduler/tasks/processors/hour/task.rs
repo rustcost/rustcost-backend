@@ -7,10 +7,15 @@ use crate::scheduler::tasks::processors::hour::container::task::process_containe
 pub async fn run() -> Result<()> {
     debug!("Running hour aggregation task...");
 
-    process_pod_minute_to_hour().await.expect("TODO: panic message");
-    process_container_minute_to_hour().await.expect("TODO: panic message");
-    process_node_minute_to_hour().await.expect("TODO: panic message");
+    process_pod_minute_to_hour()
+        .await
+        .expect("Failed to process pod minute-to-hour aggregation");
+    process_container_minute_to_hour()
+        .await
+        .expect("Failed to process container minute-to-hour aggregation");
+    process_node_minute_to_hour()
+        .await
+        .expect("Failed to process node minute-to-hour aggregation");
 
     Ok(())
 }
-

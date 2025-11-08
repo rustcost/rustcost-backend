@@ -39,7 +39,8 @@ pub async fn update_node_info(
 
     let node_info = map_node_to_node_info_entity(&node)?;
 
-    repo.update(&node_info).expect("TODO: panic message");
+    repo.update(&node_info)
+        .expect("Failed to update node info in InfoNodeCollectorRepository");
 
     Ok(())
 }
