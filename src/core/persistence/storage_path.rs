@@ -58,5 +58,3 @@ pub use crate::core::persistence::info::path::{
     info_unit_price_path,
     info_version_path,
 };
-
-// No metric path aliases; use crate::core::persistence::metrics::k8s::path directly.

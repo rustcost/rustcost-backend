@@ -1,7 +1,7 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::k8s::node::metric_node_entity::MetricNodeEntity;
-use anyhow::{anyhow, Result};
-use chrono::{DateTime, Utc};
+use anyhow::{anyhow, Context, Result};
+use chrono::{DateTime, NaiveDate, Datelike, Utc};
 use std::io::BufWriter;
 use std::{
     fs::File,
@@ -12,7 +12,10 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::k8s::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
-use crate::core::persistence::metrics::k8s::path::metric_k8s_node_key_hour_file_path;
+use crate::core::persistence::metrics::k8s::path::{
+    metric_k8s_node_key_hour_dir_path,
+    metric_k8s_node_key_hour_file_path,
+};
 
 /// Adapter for node minute-level metrics.
 /// Responsible for appending minute samples to the filesystem and cleaning up old data.
@@ -187,19 +190,31 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
 
 
     fn cleanup_old(&self, node_name: &str, before: DateTime<Utc>) -> Result<()> {
-        let cutoff_month = before.format("%Y-%m").to_string();
+        let dir = metric_k8s_node_key_hour_dir_path(node_name);
+        if !dir.exists() { return Ok(()); }
 
-        let paths = [
-            //TODO
-            format!("data/metric/node/{node_name}/h/{cutoff_month}.rcd"),
-        ];
+        let before_month = NaiveDate::from_ymd_opt(before.year(), before.month() as u32, 1)
+            .expect("valid before month date");
 
-        for path in &paths {
-            if Path::new(path).exists() {
-                let _ = fs::remove_file(path);
+        for entry in fs::read_dir(&dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rcd") { continue; }
+
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                let parts: Vec<&str> = stem.split('-').collect();
+                if parts.len() == 2 {
+                    if let (Ok(y), Ok(m)) = (parts[0].parse::<i32>(), parts[1].parse::<u32>()) {
+                        if let Some(file_month) = NaiveDate::from_ymd_opt(y, m, 1) {
+                            if file_month < before_month {
+                                fs::remove_file(&path)
+                                    .with_context(|| format!("Failed to delete old metric file {:?}", path))?;
+                            }
+                        }
+                    }
+                }
             }
         }
-
         Ok(())
     }
 

@@ -1,7 +1,7 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::k8s::pod::metric_pod_entity::MetricPodEntity;
-use anyhow::{anyhow, Result};
-use chrono::{DateTime, Utc};
+use anyhow::{anyhow, Context, Result};
+use chrono::{DateTime, Datelike, Utc};
 use std::io::BufWriter;
 use std::{
     fs::File,
@@ -12,7 +12,10 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_fs_adapter::MetricPodHourFsAdapter;
-use crate::core::persistence::metrics::k8s::path::metric_k8s_pod_key_day_file_path;
+use crate::core::persistence::metrics::k8s::path::{
+    metric_k8s_pod_key_day_dir_path,
+    metric_k8s_pod_key_day_file_path,
+};
 
 /// Adapter for pod hour-level metrics.
 /// Responsible for appending hour samples to the filesystem and cleaning up old data.
@@ -202,16 +205,22 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodDayFsAdapter {
 
 
     fn cleanup_old(&self, pod_uid: &str, before: DateTime<Utc>) -> Result<()> {
-        let cutoff_month = before.format("%Y-%m").to_string();
+        let dir = metric_k8s_pod_key_day_dir_path(pod_uid);
+        if !dir.exists() { return Ok(()); }
 
-        let paths = [
-            //TODO
-            format!("data/metric/pod/{pod_uid}/m/{cutoff_month}.rcd"),
-        ];
+        let cutoff_year = before.year();
+        for entry in fs::read_dir(&dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rcd") { continue; }
 
-        for path in &paths {
-            if Path::new(path).exists() {
-                let _ = fs::remove_file(path);
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                if let Ok(year) = stem.parse::<i32>() {
+                    if year < cutoff_year {
+                        fs::remove_file(&path)
+                            .with_context(|| format!("Failed to delete old metric file {:?}", path))?;
+                    }
+                }
             }
         }
 

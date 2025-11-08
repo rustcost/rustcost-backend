@@ -1,6 +1,6 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::k8s::pod::metric_pod_entity::MetricPodEntity;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, NaiveDate, Utc};
 use std::io::BufWriter;
 use std::{
@@ -130,34 +130,23 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodMinuteFsAdapter {
     }
 
     fn cleanup_old(&self, pod_uid: &str, before: DateTime<Utc>) -> Result<()> {
-        let metrics_dir = metric_k8s_pod_key_minute_dir_path(pod_uid);
+        let dir = metric_k8s_pod_key_minute_dir_path(pod_uid);
+        if !dir.exists() { return Ok(()); }
 
-        if !metrics_dir.exists() {
-            return Ok(());
-        }
-
-        for entry in fs::read_dir(&metrics_dir)? {
+        for entry in fs::read_dir(&dir)? {
             let entry = entry?;
             let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rcd") { continue; }
 
-            // Only process .rcd files
-            if path.extension().and_then(|e| e.to_str()) != Some("rcd") {
-                continue;
-            }
-
-            if let Some(file_name) = path.file_stem().and_then(|s| s.to_str()) {
-                // Expect filenames like "2025-11-01"
-                if let Ok(file_date) = NaiveDate::parse_from_str(file_name, "%Y-%m-%d") {
-                    if let Some(naive_dt) = file_date.and_hms_opt(0, 0, 0) {
-                        let file_dt: DateTime<Utc> = DateTime::from_naive_utc_and_offset(naive_dt, Utc);
-                        if file_dt < before {
-                            fs::remove_file(&path)?;
-                        }
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                if let Ok(file_date) = NaiveDate::parse_from_str(stem, "%Y-%m-%d") {
+                    if file_date < before.date_naive() {
+                        fs::remove_file(&path)
+                            .with_context(|| format!("Failed to delete old metric file {:?}", path))?;
                     }
                 }
             }
         }
-
         Ok(())
     }
 
