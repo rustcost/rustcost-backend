@@ -191,7 +191,7 @@ pub fn metric_node_rustcost_base_path(node_key: &str) -> PathBuf {
 pub fn metric_node_day_path(node_key: &str, period_year: &str) -> PathBuf {
     metric_path(EntityType::Node, node_key, MetricGranularity::Day, period_year)
 }
-pub fn metric_pod_node_day_dir(pod_key: &str) -> PathBuf {
+pub fn metric_node_day_dir(pod_key: &str) -> PathBuf {
     get_rustcost_base_path()
         .join("metric")
         .join("node")

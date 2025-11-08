@@ -21,7 +21,7 @@ pub trait MetricFsAdapterBase<T>: Send + Sync {
     /// Remove old metric files before a given timestamp
     #[allow(unused_variables)]
     fn cleanup_old(&self, name: &str, before: DateTime<Utc>) -> Result<()> {
-        unimplemented!("")
+        unimplemented!("cleanup_old not used in this adapter")
     }
 
     // === API-like ===
