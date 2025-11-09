@@ -1,5 +1,5 @@
 use super::info_pod_entity::InfoPodEntity;
-use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
+use crate::core::persistence::info::k8s::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use anyhow::Result;
 
 /// API repository trait for pods.

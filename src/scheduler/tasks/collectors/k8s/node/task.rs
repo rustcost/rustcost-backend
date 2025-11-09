@@ -1,4 +1,4 @@
-use crate::core::persistence::info::dynamic::node::info_node_collector_repository_trait::InfoNodeCollectorRepository;
+use crate::core::persistence::info::k8s::node::info_node_collector_repository_trait::InfoNodeCollectorRepository;
 use crate::core::persistence::metrics::k8s::node::minute::metric_node_minute_collector_repository_trait::MetricNodeMinuteCollectorRepository;
 use crate::core::persistence::metrics::k8s::node::minute::metric_node_minute_fs_adapter::MetricNodeMinuteFsAdapter;
 use crate::scheduler::tasks::collectors::k8s::node::info_node_minute_collector_repository::InfoNodeCollectorRepositoryImpl;

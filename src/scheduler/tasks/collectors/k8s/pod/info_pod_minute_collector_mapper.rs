@@ -1,4 +1,4 @@
-use crate::core::persistence::info::dynamic::pod::info_pod_entity::InfoPodEntity;
+use crate::core::persistence::info::k8s::pod::info_pod_entity::InfoPodEntity;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::PodSummary;
 use chrono::{DateTime, Utc};
 

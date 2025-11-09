@@ -1,4 +1,4 @@
-use crate::core::persistence::info::dynamic::pod::info_pod_collector_repository_trait::InfoPodCollectorRepository;
+use crate::core::persistence::info::k8s::pod::info_pod_collector_repository_trait::InfoPodCollectorRepository;
 use crate::core::persistence::metrics::k8s::pod::minute::metric_pod_minute_collector_repository_trait::MetricPodMinuteCollectorRepository;
 use crate::core::persistence::metrics::k8s::pod::minute::metric_pod_minute_fs_adapter::MetricPodMinuteFsAdapter;
 use crate::scheduler::tasks::collectors::k8s::pod::info_pod_minute_collector_mapper::map_pod_summary_to_info;

@@ -1,8 +1,8 @@
 use anyhow::Result;
-use crate::core::persistence::info::dynamic::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
-use crate::core::persistence::info::dynamic::container::info_container_api_repository_trait::InfoContainerApiRepository;
-use crate::core::persistence::info::dynamic::container::info_container_entity::InfoContainerEntity;
-use crate::core::persistence::info::dynamic::container::info_container_fs_adapter::InfoContainerFsAdapter;
+use crate::core::persistence::info::k8s::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
+use crate::core::persistence::info::k8s::container::info_container_api_repository_trait::InfoContainerApiRepository;
+use crate::core::persistence::info::k8s::container::info_container_entity::InfoContainerEntity;
+use crate::core::persistence::info::k8s::container::info_container_fs_adapter::InfoContainerFsAdapter;
 
 /// API-side repository implementation for container info.
 pub struct InfoK8sContainerApiRepositoryImpl {

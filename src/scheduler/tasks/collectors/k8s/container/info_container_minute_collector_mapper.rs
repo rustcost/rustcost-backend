@@ -1,6 +1,6 @@
 use crate::scheduler::tasks::collectors::k8s::summary_dto::ContainerSummary;
 use chrono::{DateTime, Utc};
-use crate::core::persistence::info::dynamic::container::info_container_entity::InfoContainerEntity;
+use crate::core::persistence::info::k8s::container::info_container_entity::InfoContainerEntity;
 
 /// Maps a Kubelet `ContainerSummary` into a persistent `InfoContainerEntity`.
 ///

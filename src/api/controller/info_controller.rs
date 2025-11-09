@@ -7,9 +7,9 @@ use crate::api::util::validation_ext::ValidateRequestExt;
 use crate::core::persistence::info::fixed::setting::info_setting_entity::InfoSettingEntity;
 use crate::core::persistence::info::fixed::unit_price::info_unit_price_entity::InfoUnitPriceEntity;
 use crate::core::persistence::info::fixed::version::info_version_entity::InfoVersionEntity;
-use crate::core::persistence::info::dynamic::node::info_node_entity::InfoNodeEntity;
-use crate::core::persistence::info::dynamic::pod::info_pod_entity::InfoPodEntity;
-use crate::core::persistence::info::dynamic::container::info_container_entity::InfoContainerEntity;
+use crate::core::persistence::info::k8s::node::info_node_entity::InfoNodeEntity;
+use crate::core::persistence::info::k8s::pod::info_pod_entity::InfoPodEntity;
+use crate::core::persistence::info::k8s::container::info_container_entity::InfoContainerEntity;
 use crate::domain::info::dto::info_setting_upsert_request::InfoSettingUpsertRequest;
 use crate::domain::info::dto::info_unit_price_upsert_request::InfoUnitPriceUpsertRequest;
 

@@ -1,6 +1,6 @@
 use anyhow::Result;
-use crate::core::persistence::info::dynamic::container::info_container_api_repository_trait::InfoContainerApiRepository;
-use crate::core::persistence::info::dynamic::container::info_container_entity::InfoContainerEntity;
+use crate::core::persistence::info::k8s::container::info_container_api_repository_trait::InfoContainerApiRepository;
+use crate::core::persistence::info::k8s::container::info_container_entity::InfoContainerEntity;
 use crate::domain::info::repository::info_k8s_container_api_repository::InfoK8sContainerApiRepositoryImpl;
 
 
