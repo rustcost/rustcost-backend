@@ -21,6 +21,12 @@ pub async fn handle_pod(summary: &Summary) -> Result<bool> {
     for pod in pods {
         let pod_uid = &pod.pod_ref.uid;
 
+        // ✅ Skip pseudo-UIDs (static pod hashes)
+        if !pod_uid.contains('-') {
+            tracing::debug!("⚠️ Skipping static pod (config hash) '{}'", pod_uid);
+            continue;
+        }
+
         // ---- Info section ----
         let info_repo = InfoPodCollectorRepositoryImpl::default();
         let pod_info = map_pod_summary_to_info(pod, &summary.node.node_name);

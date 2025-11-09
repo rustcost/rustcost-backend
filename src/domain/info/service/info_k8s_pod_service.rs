@@ -9,8 +9,9 @@ use crate::core::client::k8s::client_k8s_pod_mapper::map_pod_to_info_pod_entity;
 use crate::core::client::k8s::util::{build_client, read_token};
 use crate::core::persistence::info::k8s::pod::info_pod_api_repository_trait::InfoPodApiRepository;
 use crate::core::persistence::info::k8s::pod::info_pod_entity::InfoPodEntity;
+use crate::core::persistence::info::path::info_k8s_pod_dir_path;
 use crate::domain::info::repository::info_k8s_pod_api_repository::InfoK8sPodApiRepositoryImpl;
-
+use std::fs;
 pub async fn get_info_k8s_pod(pod_uid: String) -> Result<InfoPodEntity> {
     let repo = InfoK8sPodApiRepositoryImpl::default();
 
@@ -75,9 +76,39 @@ pub async fn list_k8s_pods(filter: K8sListQuery) -> Result<Vec<InfoPodEntity>> {
     let client = build_client()?;
     let repo = InfoK8sPodApiRepositoryImpl::default();
 
-    debug!("Listing pods with filter {:?}", filter);
+    let mut cached_entities = Vec::new();
+    let mut expired_or_missing = false;
 
-    // 1️⃣ Select appropriate fetcher
+    // 1️⃣ Try loading from filesystem cache via repo
+    let pod_dir = info_k8s_pod_dir_path();
+    if pod_dir.exists() {
+        if let Ok(entries) = fs::read_dir(&pod_dir) {
+            for entry in entries.flatten() {
+                let pod_uid = entry.file_name().to_string_lossy().to_string();
+                if let Ok(existing) = repo.read(&pod_uid) {
+                    if let Some(ts) = existing.last_updated_info_at {
+                        if Utc::now().signed_duration_since(ts) <= Duration::hours(1) {
+                            debug!("✅ Using cached pod info for '{}'", pod_uid);
+                            cached_entities.push(existing);
+                            continue;
+                        }
+                    }
+                }
+                debug!("⚠️ Cache expired or missing for '{}'", pod_uid);
+                expired_or_missing = true;
+            }
+        }
+    }
+
+    // 2️⃣ If all pods were fresh, return cached data only
+    if !expired_or_missing && !cached_entities.is_empty() {
+        debug!("📦 All cached pod info is fresh, skipping API call.");
+        return Ok(cached_entities);
+    }
+
+    debug!("🌐 Fetching pods from K8s API (some cache expired or missing)");
+
+    // 3️⃣ Select appropriate fetcher
     let pod_list = if let Some(ns) = &filter.namespace {
         fetch_pods_by_namespace(&token, &client, ns).await?
     } else if let Some(label) = &filter.label_selector {
@@ -88,23 +119,20 @@ pub async fn list_k8s_pods(filter: K8sListQuery) -> Result<Vec<InfoPodEntity>> {
         fetch_pods(&token, &client).await?
     };
 
-    debug!("Fetched {} pod(s)", pod_list.items.len());
+    debug!("Fetched {} pod(s) from API", pod_list.items.len());
 
-    // 2️⃣ Map all to InfoPodEntity + update repo
-    // let mut result_entities = Vec::new();
-    // for pod in pod_list.items {
-    //     let pod_uid = pod.metadata.uid.clone();
+    // 4️⃣ Map API pods → entities, update repo, and merge results
+    let mut result_entities = cached_entities;
+    for pod in pod_list.items {
+        let pod_uid = pod.metadata.uid.clone();
+        let mapped = map_pod_to_info_pod_entity(&pod)?;
 
+        if let Err(e) = repo.update(&mapped) {
+            debug!("⚠️ Failed to update pod '{}': {:?}", pod_uid, e);
+        }
 
+        result_entities.push(mapped);
+    }
 
-        // --- Refresh or cache
-        // let mapped = map_pod_to_info_pod_entity(&pod)?;
-        // if let Err(e) = repo.update(&mapped) {
-        //     debug!("Failed to update pod '{}': {:?}", pod_uid, e);
-        // }
-        // result_entities.push(mapped);
-    //}
-    //TODO!
-    Ok(Default::default())
-    //Ok(result_entities)
+    Ok(result_entities)
 }
