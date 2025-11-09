@@ -1,5 +1,7 @@
 //! Info domain DTOs
 
+pub mod info_setting_upsert_request;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

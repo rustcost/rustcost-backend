@@ -2,9 +2,10 @@
 
 use axum::{extract::Path, Json};
 use serde_json::Value;
-
 use crate::api::dto::ApiResponse;
+use crate::api::util::validation_ext::ValidateRequestExt;
 use crate::core::persistence::info::fixed::setting::info_setting_entity::InfoSettingEntity;
+use crate::domain::info::dto::info_setting_upsert_request::InfoSettingUpsertRequest;
 
 pub async fn get_settings() -> Json<ApiResponse<InfoSettingEntity>> {
     match crate::domain::info::service::settings_service::get_settings().await {
@@ -13,8 +14,15 @@ pub async fn get_settings() -> Json<ApiResponse<InfoSettingEntity>> {
     }
 }
 pub async fn upsert_settings(
-    Json(payload): Json<InfoSettingEntity>,
+    Json(payload): Json<InfoSettingUpsertRequest>,
 ) -> Json<ApiResponse<Value>> {
+    // ✅ 1. Validate the payload
+    let payload = match payload.validate_or_err() {
+        Ok(v) => v,
+        Err(err_json) => return err_json,
+    };
+
+    // ✅ 2. Call your service
     match crate::domain::info::service::settings_service::upsert_settings(payload).await {
         Ok(v) => Json(ApiResponse::ok(v)),
         Err(e) => Json(ApiResponse::err(e.to_string())),

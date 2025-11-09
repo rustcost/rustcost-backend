@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::env;
+use crate::domain::info::dto::info_setting_upsert_request::InfoSettingUpsertRequest;
 
 /// Global configuration for RustCost.
 ///
@@ -178,6 +179,124 @@ impl Default for InfoSettingEntity {
 
             k8s_api_url: env::var("RUSTCOST_K8S_API_URL").ok(),
         }
+    }
+}
+impl InfoSettingEntity {
+    pub fn apply_update(&mut self, req: InfoSettingUpsertRequest) {
+        // === General & UI ===
+        if let Some(v) = req.is_dark_mode {
+            self.is_dark_mode = v;
+        }
+        if let Some(v) = req.language {
+            self.language = v;
+        }
+        if let Some(v) = req.minute_retention_days {
+            self.minute_retention_days = v;
+        }
+        if let Some(v) = req.hour_retention_months {
+            self.hour_retention_months = v;
+        }
+        if let Some(v) = req.day_retention_years {
+            self.day_retention_years = v;
+        }
+        if let Some(v) = req.retention_policy {
+            self.retention_policy = v;
+        }
+
+        // === File-based Persistence ===
+        if let Some(v) = req.enable_line_num_tracking {
+            self.enable_line_num_tracking = v;
+        }
+        if let Some(v) = req.enable_index_file {
+            self.enable_index_file = v;
+        }
+        if let Some(v) = req.max_storage_gb {
+            self.max_storage_gb = v;
+        }
+        if let Some(v) = req.compression_enabled {
+            self.compression_enabled = v;
+        }
+
+        // === Metrics ===
+        if let Some(v) = req.scrape_interval_sec {
+            self.scrape_interval_sec = v;
+        }
+        if let Some(v) = req.metrics_batch_size {
+            self.metrics_batch_size = v;
+        }
+
+        // === Alerts & Notifications ===
+        if let Some(v) = req.enable_cluster_health_alert {
+            self.enable_cluster_health_alert = v;
+        }
+        if let Some(v) = req.enable_rustcost_health_alert {
+            self.enable_rustcost_health_alert = v;
+        }
+        if let Some(v) = req.global_alert_subject {
+            self.global_alert_subject = v;
+        }
+        if let Some(v) = req.email_recipients {
+            self.email_recipients = v;
+        }
+
+        // Optional URLs and tokens (normalize empty strings → None)
+        if let Some(v) = normalize_string_opt(req.linkback_url) {
+            self.linkback_url = v;
+        }
+        if let Some(v) = normalize_string_opt(req.slack_webhook_url) {
+            self.slack_webhook_url = v;
+        }
+        if let Some(v) = normalize_string_opt(req.teams_webhook_url) {
+            self.teams_webhook_url = v;
+        }
+        if let Some(v) = normalize_string_opt(req.llm_url) {
+            self.llm_url = v;
+        }
+        if let Some(v) = normalize_string_opt(req.llm_token) {
+            self.llm_token = v;
+        }
+        if let Some(v) = normalize_string_opt(req.llm_model) {
+            self.llm_model = v;
+        }
+        if let Some(v) = normalize_string_opt(req.k8s_api_url) {
+            self.k8s_api_url = v;
+        }
+
+        // === Runtime ===
+        if let Some(v) = req.runtime_type {
+            self.runtime_type = match v.to_lowercase().as_str() {
+                "docker" => RuntimeType::Docker,
+                "containerd" => RuntimeType::Containerd,
+                "baremetal" => RuntimeType::BareMetal,
+                _ => RuntimeType::K8s,
+            };
+        }
+        if let Some(v) = req.enable_k8s_api {
+            self.enable_k8s_api = v;
+        }
+        if let Some(v) = req.enable_container_exporter {
+            self.enable_container_exporter = v;
+        }
+        if let Some(v) = req.enable_gpu_exporter {
+            self.enable_gpu_exporter = v;
+        }
+        if let Some(v) = req.gpu_exporter_urls {
+            self.gpu_exporter_urls = v;
+        }
+        if let Some(v) = req.container_exporter_urls {
+            self.container_exporter_urls = v;
+        }
+
+        // === Update timestamp ===
+        self.updated_at = Utc::now();
+    }
+}
+
+fn normalize_string_opt(v: Option<String>) -> Option<Option<String>> {
+    match v {
+        Some(s) if s.trim().is_empty() => Some(None),
+        Some(s) => Some(Some(s)),
+        None => None,
     }
 }
 
