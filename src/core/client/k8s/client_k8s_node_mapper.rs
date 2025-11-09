@@ -81,6 +81,9 @@ pub fn map_node_to_node_info_entity(node: &Node) -> Result<InfoNodeEntity> {
         .as_ref()
         .and_then(|ts| DateTime::from_str(ts).ok());
 
+    // --- Parse last_updated_info_at (always now)
+    let last_updated_info_at = Some(Utc::now());
+
     // Extract addresses (hostname, internal IP)
     let (hostname, internal_ip) = status
         .and_then(|s| s.addresses.as_ref())
@@ -230,6 +233,7 @@ pub fn map_node_to_node_info_entity(node: &Node) -> Result<InfoNodeEntity> {
         image_count,
         image_names,
         image_total_size_bytes,
+        last_updated_info_at,
         ..Default::default()
     })
 }
