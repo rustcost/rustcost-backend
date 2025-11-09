@@ -2,7 +2,7 @@
 
 use crate::core::persistence::info::k8s::node::info_node_entity::InfoNodeEntity;
 use crate::core::persistence::metrics::k8s::node::metric_node_entity::MetricNodeEntity;
-use crate::scheduler::tasks::collectors::k8s::node::node_list_dto::Node;
+use crate::core::client::k8s::client_k8s_node_dto::Node;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::{NetworkStats, Summary};
 use anyhow::Result;
 use chrono::{DateTime, Utc};

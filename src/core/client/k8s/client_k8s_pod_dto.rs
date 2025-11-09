@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use crate::core::client::k8s::container_dto::{ContainerSpec, ContainerStatus};
+use crate::core::client::k8s::client_k8s_container_dto::{ContainerSpec, ContainerStatus};
 
 /// Represents a list of Pods returned by /api/v1/pods
 #[derive(Deserialize, Debug)]
