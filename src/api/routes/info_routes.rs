@@ -5,12 +5,12 @@ use crate::api::controller::info_controller as ic;
 
 pub fn info_routes() -> Router {
     Router::new()
-        .route("/settings", get(ic::get_settings).put(ic::upsert_settings))
-        .route("/unit-prices", get(ic::get_unit_prices).put(ic::upsert_unit_prices))
-        .route("/versions", get(ic::get_versions))
+        .route("/settings", get(ic::get_info_settings).put(ic::upsert_info_settings))
+        .route("/unit-prices", get(ic::get_info_unit_prices).put(ic::upsert_info_unit_prices))
+        .route("/versions", get(ic::get_info_versions))
         // Examples for entity reads
-        .route("/nodes/{node_name}", get(ic::get_node_info))
-        .route("/pods/{pod_uid}", get(ic::get_pod_info))
-        .route("/containers/{id}", get(ic::get_container_info))
+        .route("/k8s/nodes/{node_name}", get(ic::get_info_k8s_node))
+        .route("/k8s/pods/{pod_uid}", get(ic::get_info_k8s_pod))
+        .route("/k8s/containers/{id}", get(ic::get_info_k8s_container))
 }
 

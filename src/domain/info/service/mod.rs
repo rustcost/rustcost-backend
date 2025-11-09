@@ -1,7 +1,9 @@
 //! Info CRUD and validation logic
 
-pub mod settings_service;
-pub mod unit_price_service;
-pub mod version_service;
-pub mod entity_read_service;
+pub mod info_settings_service;
+pub mod info_unit_price_service;
+pub mod info_version_service;
+pub mod info_k8s_node_service;
+pub mod info_k8s_pod_service;
+pub mod info_k8s_container_service;
 

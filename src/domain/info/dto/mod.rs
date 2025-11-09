@@ -1,6 +1,7 @@
 //! Info domain DTOs
 
 pub mod info_setting_upsert_request;
+pub mod info_unit_price_upsert_request;
 
 use serde::{Deserialize, Serialize};
 

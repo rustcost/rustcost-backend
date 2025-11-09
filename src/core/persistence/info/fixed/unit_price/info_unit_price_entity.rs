@@ -1,4 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
+use crate::domain::info::dto::info_unit_price_upsert_request::InfoUnitPriceUpsertRequest;
 
 /// Represents per-unit pricing configuration for system resource usage.
 ///
@@ -40,11 +42,29 @@ pub struct InfoUnitPriceEntity {
     pub network_regional_gb: f64,
     /// Price per GB transferred to external networks (internet egress)
     pub network_external_gb: f64,
+
+    /// Last update timestamp (UTC).
+    pub updated_at: DateTime<Utc>,
 }
 
+impl InfoUnitPriceEntity {
+    pub fn apply_update(&mut self, req: InfoUnitPriceUpsertRequest) {
+        if let Some(v) = req.cpu_core_hour { self.cpu_core_hour = v; }
+        if let Some(v) = req.cpu_spot_core_hour { self.cpu_spot_core_hour = v; }
+        if let Some(v) = req.memory_gb_hour { self.memory_gb_hour = v; }
+        if let Some(v) = req.memory_spot_gb_hour { self.memory_spot_gb_hour = v; }
+        if let Some(v) = req.gpu_hour { self.gpu_hour = v; }
+        if let Some(v) = req.gpu_spot_hour { self.gpu_spot_hour = v; }
+        if let Some(v) = req.storage_gb_hour { self.storage_gb_hour = v; }
+        if let Some(v) = req.network_local_gb { self.network_local_gb = v; }
+        if let Some(v) = req.network_regional_gb { self.network_regional_gb = v; }
+        if let Some(v) = req.network_external_gb { self.network_external_gb = v; }
+    }
+}
 
 impl Default for InfoUnitPriceEntity {
     fn default() -> Self {
+        let now = Utc::now();
         Self {
             cpu_core_hour: 0.031 / (30.0 * 24.0),         // Convert rough monthly → hour
             cpu_spot_core_hour: 0.006 / (30.0 * 24.0),
@@ -56,6 +76,7 @@ impl Default for InfoUnitPriceEntity {
             network_local_gb: 0.01,
             network_regional_gb: 0.01,
             network_external_gb: 0.12,
+            updated_at: now,
         }
     }
 }

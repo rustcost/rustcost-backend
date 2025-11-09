@@ -6,13 +6,13 @@ use crate::domain::info::dto::info_setting_upsert_request::InfoSettingUpsertRequ
 use crate::domain::info::repository::info_settings_api_repository::InfoSettingApiRepositoryImpl;
 
 
-pub async fn get_settings() -> Result<InfoSettingEntity> {
+pub async fn get_info_settings() -> Result<InfoSettingEntity> {
     let repo = InfoSettingApiRepositoryImpl::default();
     let settings = repo.read()?;
     Ok(settings)
 }
 
-pub async fn upsert_settings(req: InfoSettingUpsertRequest) -> Result<Value> {
+pub async fn upsert_info_settings(req: InfoSettingUpsertRequest) -> Result<Value> {
     let repo = InfoSettingApiRepositoryImpl::default();
 
     let mut settings = repo.read()?;
