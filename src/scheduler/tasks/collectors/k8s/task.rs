@@ -1,5 +1,5 @@
-use crate::core::kube_client::{build_client, read_token};
-use crate::scheduler::tasks::collectors::k8s::node::client::{fetch_node_summary, fetch_nodes};
+use crate::core::client::k8s_client::{build_client, read_token};
+use crate::core::client::k8s_client::{fetch_node_summary, fetch_nodes};
 use crate::scheduler::tasks::collectors::k8s::node::task::{handle_node, update_node_info};
 use crate::scheduler::tasks::collectors::k8s::pod::task::handle_pod;
 use crate::scheduler::tasks::collectors::k8s::summary_dto::Summary;

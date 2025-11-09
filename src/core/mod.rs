@@ -7,6 +7,6 @@
 //! The `core` layer represents the application's internal logic — independent of any
 //! specific runtime (CLI, HTTP server, etc.).
 
-pub mod kube_client;
 pub mod constants;
 pub mod persistence;
+pub mod client;

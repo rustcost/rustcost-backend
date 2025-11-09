@@ -1,4 +1,3 @@
-pub mod client;
 pub mod task;
 pub mod mapper;
 pub mod node_list_dto;
