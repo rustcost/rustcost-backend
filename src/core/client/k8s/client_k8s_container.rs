@@ -1,8 +1,28 @@
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tracing::debug;
-use crate::core::client::k8s::client_k8s_container_dto::{ContainerInfo, ContainerList, ContainerStatus};
+
 use crate::core::client::k8s::client_k8s_pod::{fetch_pod_by_uid, fetch_pods};
+use crate::core::client::k8s::client_k8s_pod_dto::ContainerStatus;
+
+// --- Your custom structs for container summary results ---
+#[derive(Debug, Clone)]
+pub struct ContainerInfo {
+    pub container_name: String,
+    pub image: Option<String>,
+    pub pod_name: String,
+    pub namespace: String,
+    pub image_id: Option<String>,
+    pub container_id: Option<String>,
+    pub ready: Option<bool>,
+    pub restart_count: Option<i32>,
+    pub started_at: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ContainerList {
+    pub items: Vec<ContainerInfo>,
+}
 
 /// Fetch all containers across all pods
 pub async fn fetch_containers(token: &str, client: &Client) -> Result<ContainerList> {
@@ -10,12 +30,12 @@ pub async fn fetch_containers(token: &str, client: &Client) -> Result<ContainerL
     let pods = fetch_pods(token, client).await?;
 
     let mut all_containers = Vec::new();
+    let empty: [ContainerStatus; 0] = [];
 
     for p in pods.items.iter() {
-        // Convert both match arms to the same type: &[ContainerStatus]
         let statuses: &[ContainerStatus] = match &p.status {
             Some(s) => &s.container_statuses,
-            None => &[],
+            None => &empty,
         };
 
         for c in &p.spec.containers {
@@ -28,7 +48,7 @@ pub async fn fetch_containers(token: &str, client: &Client) -> Result<ContainerL
                 namespace: p.metadata.namespace.clone(),
                 image_id: status.and_then(|s| s.image_id.clone()),
                 container_id: status.and_then(|s| s.container_id.clone()),
-                ready: status.map(|s| s.ready),
+                ready: status.and_then(|s| s.ready),
                 restart_count: status.map(|s| s.restart_count),
                 started_at: status
                     .and_then(|s| s.state.as_ref())
@@ -60,10 +80,11 @@ pub async fn fetch_containers_by_pod_uid(
 ) -> Result<ContainerList> {
     debug!("Fetching containers in pod UID '{}'", pod_uid);
     let pod = fetch_pod_by_uid(token, client, pod_uid).await?;
+    let empty: [ContainerStatus; 0] = [];
 
     let statuses: &[ContainerStatus] = match &pod.status {
         Some(s) => &s.container_statuses,
-        None => &[],
+        None => &empty,
     };
 
     let containers = pod
@@ -79,7 +100,7 @@ pub async fn fetch_containers_by_pod_uid(
                 namespace: pod.metadata.namespace.clone(),
                 image_id: status.and_then(|s| s.image_id.clone()),
                 container_id: status.and_then(|s| s.container_id.clone()),
-                ready: status.map(|s| s.ready),
+                ready: status.and_then(|s| s.ready),
                 restart_count: status.map(|s| s.restart_count),
                 started_at: status
                     .and_then(|s| s.state.as_ref())
@@ -134,7 +155,7 @@ pub async fn fetch_container_by_name_and_pod_uid(
         namespace: pod.metadata.namespace.clone(),
         image_id: status.and_then(|s| s.image_id.clone()),
         container_id: status.and_then(|s| s.container_id.clone()),
-        ready: status.map(|s| s.ready),
+        ready: status.and_then(|s| s.ready),
         restart_count: status.map(|s| s.restart_count),
         started_at: status
             .and_then(|s| s.state.as_ref())

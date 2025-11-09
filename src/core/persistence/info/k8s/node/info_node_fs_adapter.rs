@@ -2,8 +2,7 @@ use super::info_node_entity::InfoNodeEntity;
 use crate::core::persistence::info::k8s::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use anyhow::{Context, Result};
 use std::{fs::{self, File}, io, io::{BufRead, BufReader, Write}, path::Path};
-use crate::core::persistence::info::path::{info_node_dir_path, info_node_file_path};
-use crate::core::persistence::metrics::k8s::path::metric_k8s_node_key_dir_path;
+use crate::core::persistence::info::path::{info_k8s_node_key_dir_path, info_k8s_node_file_path};
 
 /// File-based FS adapter for the `InfoNodeEntity`.
 ///
@@ -17,7 +16,7 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
     /// Reads the node info file into memory.
     /// Returns a default entity if the file does not exist.
     fn read(&self, node_name: &str) -> Result<InfoNodeEntity> {
-        let path = info_node_file_path(node_name);
+        let path = info_k8s_node_file_path(node_name);
 
         if !Path::new(&path).exists() {
             return Ok(InfoNodeEntity::default());
@@ -101,7 +100,7 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
 
     /// Deletes the node info file if present.
     fn delete(&self, node_name: &str) -> Result<()> {
-        let path = info_node_file_path(node_name);
+        let path = info_k8s_node_file_path(node_name);
         if Path::new(&path).exists() {
             fs::remove_file(&path).context("Failed to delete node info file")?;
         }
@@ -109,33 +108,23 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
     }
 
     fn exists(&self, node_name: &str) -> Result<bool> {
-        let path = info_node_file_path(node_name);
+        let path = info_k8s_node_file_path(node_name);
         Ok(Path::new(&path).exists())
     }
 
 }
 
 impl InfoNodeFsAdapter {
-    /// Ensures the per-node data directories exist.
-    /// Creates: data/metric/node/{node_name}/{m,h,d}
     pub fn create_node_dir_if_missing(node_name: &str) -> Result<()> {
-        let base = metric_k8s_node_key_dir_path(node_name);
-
-        for sub in ["d", "h", "m"] {
-            let path = base.join(sub);
-            if let Err(e) = fs::create_dir_all(&path) {
-                if e.kind() != io::ErrorKind::AlreadyExists {
-                    return Err(e.into());
-                }
-            }
-        }
+        let path = info_k8s_node_key_dir_path(node_name);
+        fs::create_dir_all(&path).context("Failed to create node info directory")?;
         Ok(())
     }
 
     /// Internal helper: atomically writes a node info file.
     fn write(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
 
-        let dir = info_node_dir_path(node_name);
+        let dir = info_k8s_node_key_dir_path(node_name);
         fs::create_dir_all(&dir).context("Failed to create node info directory")?;
 
         let tmp_path = dir.join("info.rci.tmp");

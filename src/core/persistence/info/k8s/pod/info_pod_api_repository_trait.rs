@@ -18,4 +18,8 @@ pub trait InfoPodApiRepository: Send + Sync {
     fn update(&self, data: &InfoPodEntity) -> Result<()> {
         self.fs_adapter().update(data)
     }
+
+    fn insert(&self, data: &InfoPodEntity) -> Result<()> {
+        self.fs_adapter().insert(data)
+    }
 }

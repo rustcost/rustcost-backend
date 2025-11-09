@@ -24,29 +24,39 @@ pub fn info_setting_path() -> PathBuf {
 }
 
 // Dynamic info: container
-pub fn info_container_dir_path(container_key: &str) -> PathBuf {
+pub fn info_k8s_container_dir_path() -> PathBuf {
+    info_k8s_path("container".to_string())
+}
+pub fn info_k8s_container_key_dir_path(container_key: &str) -> PathBuf {
     info_k8s_path(format!("container/{}", container_key))
 }
 
-pub fn info_container_file_path(container_key: &str) -> PathBuf {
+pub fn info_k8s_container_file_path(container_key: &str) -> PathBuf {
     info_k8s_path(format!("container/{}/info.rci", container_key))
 }
 
 // Dynamic info: pod
-pub fn info_pod_dir_path(pod_key: &str) -> PathBuf {
+pub fn info_k8s_pod_dir_path() -> PathBuf {
+    info_k8s_path("pod".to_string())
+}
+
+pub fn info_k8s_pod_key_dir_path(pod_key: &str) -> PathBuf {
     info_k8s_path(format!("pod/{}", pod_key))
 }
 
-pub fn info_pod_file_path(pod_key: &str) -> PathBuf {
+pub fn info_k8s_pod_file_path(pod_key: &str) -> PathBuf {
     info_k8s_path(format!("pod/{}/info.rci", pod_key))
 }
 
 // Dynamic info: node
-pub fn info_node_dir_path(node_key: &str) -> PathBuf {
+pub fn info_k8s_node_dir_path() -> PathBuf {
+    info_k8s_path("node".to_string())
+}
+pub fn info_k8s_node_key_dir_path(node_key: &str) -> PathBuf {
     info_k8s_path(format!("node/{}", node_key))
 }
 
-pub fn info_node_file_path(node_key: &str) -> PathBuf {
+pub fn info_k8s_node_file_path(node_key: &str) -> PathBuf {
     info_k8s_path(format!("node/{}/info.rci", node_key))
 }
 

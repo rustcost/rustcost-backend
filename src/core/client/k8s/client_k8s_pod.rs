@@ -1,8 +1,11 @@
 use anyhow::{anyhow, Result};
 use reqwest::Client;
+use serde_json::{Map, Value};
 use tracing::debug;
+use tracing::log::info;
 use crate::core::client::k8s::client_k8s_pod_dto::{PodList, Pod};
 use crate::core::client::k8s::util::k8s_api_server;
+use urlencoding::encode;
 
 /// Fetch all pods in the cluster
 pub async fn fetch_pods(token: &str, client: &Client) -> Result<PodList> {
@@ -132,12 +135,11 @@ pub async fn fetch_pod_names_by_namespace(
 
 /// Fetch a single pod by its unique UID
 pub async fn fetch_pod_by_uid(token: &str, client: &Client, pod_uid: &str) -> Result<Pod> {
-    let url = format!(
-        "{}/api/v1/pods?fieldSelector=metadata.uid={}",
-        k8s_api_server(),
-        pod_uid
-    );
-    debug!("Fetching pod with UID '{}'", pod_uid);
+    let selector = format!("metadata.uid={}", pod_uid);
+    let encoded = encode(&selector);
+
+    let url = format!("{}/api/v1/pods?fieldSelector={}", k8s_api_server(), encoded);
+    debug!("Fetching pod by UID via '{}'", url);
 
     let list: PodList = client
         .get(&url)
@@ -162,4 +164,40 @@ pub async fn fetch_pod_name_by_uid(
 ) -> Result<String> {
     let pod = fetch_pod_by_uid(token, client, pod_uid).await?;
     Ok(pod.metadata.name)
+}
+
+
+pub async fn fetch_pod_by_name_and_namespace(
+    token: &str,
+    client: &Client,
+    namespace: &str,
+    pod_name: &str,
+) -> Result<Pod> {
+    let url = format!(
+        "{}/api/v1/namespaces/{}/pods/{}",
+        k8s_api_server(),
+        namespace,
+        pod_name
+    );
+
+    info!("📡 Fetching Pod '{}/{}' from '{}'", namespace, pod_name, url);
+
+    // 1️⃣ Fetch raw JSON into a generic serde_json::Map
+    let raw_json: Map<String, Value> = client
+        .get(&url)
+        .bearer_auth(token)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+
+    // 2️⃣ Debug print structure (pretty JSON)
+    let pretty = serde_json::to_string_pretty(&raw_json)?;
+    info!("🧩 Raw Pod structure:\n{}", pretty);
+
+    // 3️⃣ Convert back into strongly typed Pod
+    let pod: Pod = serde_json::from_value(Value::Object(raw_json))?;
+
+    Ok(pod)
 }

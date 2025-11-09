@@ -27,5 +27,9 @@ impl InfoPodApiRepository for InfoK8sPodApiRepositoryImpl {
     fn update(&self, data: &InfoPodEntity) -> Result<()> {
         self.adapter.update(data)
     }
+
+    fn insert(&self, data: &InfoPodEntity) -> Result<()> {
+        self.adapter.insert(data)
+    }
 }
 
