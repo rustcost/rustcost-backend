@@ -18,8 +18,13 @@ impl MetricNodeDayApiRepository for MetricNodeDayApiRepositoryImpl  {
     fn fs_adapter(&self) -> &dyn MetricFsAdapterBase<MetricNodeEntity> {
         &self.adapter
     }
-    
-    fn get_row_between(&self, node_uid: &str, start: DateTime<Utc>, end: DateTime<Utc>) -> anyhow::Result<Vec<MetricNodeEntity>> {
-        self.adapter.get_row_between(Default::default(), Default::default(), "", None, None)
+
+    fn get_row_between(
+        &self,
+        node_uid: &str,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> anyhow::Result<Vec<MetricNodeEntity>> {
+        self.adapter.get_row_between(start, end, node_uid, None, None)
     }
 }

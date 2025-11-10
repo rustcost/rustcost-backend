@@ -28,29 +28,33 @@ impl MetricNodeDayFsAdapter {
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricNodeEntity> {
+        use chrono::{DateTime, Utc};
+
         let parts: Vec<&str> = line.split('|').collect();
-        if parts.len() != header.len() {
+        if parts.is_empty() {
             return None;
         }
 
-        // TIME|CPU_USAGE_NANO_CORES|CPU_USAGE_CORE_NANO_SECONDS|... etc.
-        let time = parts[0].parse::<DateTime<Utc>>().ok()?;
+        let time = DateTime::parse_from_rfc3339(parts[0])
+            .map(|dt| dt.with_timezone(&Utc))
+            .ok()?;
+
         Some(MetricNodeEntity {
             time,
-            cpu_usage_nano_cores: parts[1].parse().ok(),
-            cpu_usage_core_nano_seconds: parts[2].parse().ok(),
-            memory_usage_bytes: parts[3].parse().ok(),
-            memory_working_set_bytes: parts[4].parse().ok(),
-            memory_rss_bytes: parts[5].parse().ok(),
-            memory_page_faults: parts[6].parse().ok(),
-            network_physical_rx_bytes: parts[7].parse().ok(),
-            network_physical_tx_bytes: parts[8].parse().ok(),
-            network_physical_rx_errors: parts[9].parse().ok(),
-            network_physical_tx_errors: parts[10].parse().ok(),
-            fs_used_bytes: parts[11].parse().ok(),
-            fs_capacity_bytes: parts[12].parse().ok(),
-            fs_inodes_used: parts[13].parse().ok(),
-            fs_inodes: parts[14].parse().ok(),
+            cpu_usage_nano_cores: parts.get(1).and_then(|s| s.parse::<u64>().ok()),
+            cpu_usage_core_nano_seconds: parts.get(2).and_then(|s| s.parse::<u64>().ok()),
+            memory_usage_bytes: parts.get(3).and_then(|s| s.parse::<u64>().ok()),
+            memory_working_set_bytes: parts.get(4).and_then(|s| s.parse::<u64>().ok()),
+            memory_rss_bytes: parts.get(5).and_then(|s| s.parse::<u64>().ok()),
+            memory_page_faults: parts.get(6).and_then(|s| s.parse::<u64>().ok()),
+            network_physical_rx_bytes: parts.get(7).and_then(|s| s.parse::<u64>().ok()),
+            network_physical_tx_bytes: parts.get(8).and_then(|s| s.parse::<u64>().ok()),
+            network_physical_rx_errors: parts.get(9).and_then(|s| s.parse::<u64>().ok()),
+            network_physical_tx_errors: parts.get(10).and_then(|s| s.parse::<u64>().ok()),
+            fs_used_bytes: parts.get(11).and_then(|s| s.parse::<u64>().ok()),
+            fs_capacity_bytes: parts.get(12).and_then(|s| s.parse::<u64>().ok()),
+            fs_inodes_used: parts.get(13).and_then(|s| s.parse::<u64>().ok()),
+            fs_inodes: parts.get(14).and_then(|s| s.parse::<u64>().ok()),
         })
     }
 
@@ -257,6 +261,7 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeDayFsAdapter {
         let path = self.build_path(object_name);
         let path_obj = Path::new(&path);
         if !path_obj.exists() {
+            tracing::debug!("Metric file not found for {}", object_name);
             return Ok(vec![]);
         }
 
@@ -264,25 +269,60 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeDayFsAdapter {
         let reader = BufReader::new(file);
         let mut lines = reader.lines();
 
-        // Read header first
-        let header_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
-        let header: Vec<&str> = header_line.split('|').collect();
+        // Try to read the header line
+        let first_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
 
         let mut data: Vec<MetricNodeEntity> = vec![];
+        let header: Vec<&str>;
+        // If the first line looks like a timestamp -> treat it as data
+        if first_line.starts_with("20") {
+            header = vec![
+                "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
+                "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
+                "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
+                "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
+                "FS_USED_BYTES", "FS_CAPACITY_BYTES", "FS_INODES_USED", "FS_INODES"
+            ];
 
-        for line in lines.flatten() {
-            if let Some(row) = Self::parse_line(&header, &line) {
+            // process that first line as data
+            if let Some(row) = Self::parse_line(&header, &first_line) {
                 if row.time >= start && row.time <= end {
                     data.push(row);
                 }
+            }
+        } else {
+            // otherwise treat as a header
+            header = first_line.split('|').collect();
+        }
+
+        // Now process the rest
+        for line in lines.flatten() {
+            if let Some(row) = Self::parse_line(&header, &line) {
+                if row.time < start {
+                    continue;
+                }
+                if row.time > end {
+                    break;
+                }
+                data.push(row);
             }
         }
 
         // Apply pagination
         let start_idx = offset.unwrap_or(0);
-        let end_idx = limit.map(|l| start_idx + l).unwrap_or(data.len());
-        let slice = data.into_iter().skip(start_idx).take(end_idx - start_idx).collect();
+        let limit = limit.unwrap_or(data.len());
+        let slice: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();
+
+        tracing::debug!(
+        "Returning {} metric rows for {} between {} and {}",
+        slice.len(),
+        object_name,
+        start,
+        end
+    );
 
         Ok(slice)
     }
+
+
 }
