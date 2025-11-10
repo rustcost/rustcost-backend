@@ -1,19 +1,15 @@
-//! Metrics controller: connects routes to metrics usecases
+//! Metrics controller helpers: common response mapping utilities.
 
-use crate::api::dto::metrics_dto::RangeQuery;
-use crate::domain::common::model::RangeParams;
+use anyhow::Result;
+use axum::Json;
+use serde_json::Value;
 
-pub(crate) fn to_params(q: RangeQuery) -> RangeParams {
-    RangeParams {
-        start: q.start,
-        end: q.end,
-        limit: q.limit,
-        offset: q.offset,
-        sort: q.sort,
-        metric: q.metric,
-        namespace: q.namespace,
+use crate::api::dto::ApiResponse;
+
+/// Map a domain Result<Value> into Json<ApiResponse<Value>>
+pub fn to_json(result: Result<Value>) -> Json<ApiResponse<Value>> {
+    match result {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
     }
 }
-
-
-

@@ -10,7 +10,7 @@ use crate::core::persistence::metrics::k8s::node::day::{
 };
 use tracing::{debug, error};
 use crate::core::persistence::metrics::k8s::path::metric_k8s_node_dir_path;
-use crate::scheduler::tasks::processors::day::node::metric_node_hour_processor_repository::MetricNodeDayProcessorRepositoryImpl;
+use crate::scheduler::tasks::processors::day::node::metric_node_day_processor_repository::MetricNodeDayProcessorRepositoryImpl;
 
 /// Aggregates all nodes’ minute-level metrics into dayly metrics.
 ///

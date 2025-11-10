@@ -1,8 +1,8 @@
 //! Business logic for metrics (aggregation, cost calc, efficiency)
 
-pub mod summary_service;
-pub mod cost_service;
-pub mod trend_service;
-pub mod efficiency_service;
-pub mod raw_service;
-
+pub mod metric_k8s_cluster_service;
+pub mod metric_k8s_node_service;
+pub mod metric_k8s_pod_service;
+pub mod metric_k8s_container_service;
+pub mod metric_k8s_namespace_service;
+pub mod metric_k8s_deployment_service;

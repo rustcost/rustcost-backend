@@ -1,8 +1,9 @@
 //! Shared domain types (Range, Pagination, MetricUnit, etc.)
 
 use chrono::NaiveDateTime;
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct RangeParams {
     pub start: Option<NaiveDateTime>,
     pub end: Option<NaiveDateTime>,

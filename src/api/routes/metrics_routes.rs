@@ -57,7 +57,7 @@ pub fn metrics_routes() -> Router {
         .route("/namespaces/summary", get(ns_ctr::namespaces_summary))
         .route("/namespaces/{namespace}/summary", get(ns_ctr::namespace_summary))
         .route("/namespaces/trends", get(ns_ctr::namespaces_trends))
-        .route("/namespaces/{namespace}/trends", get(ns_ctr::namespaces_trends))
+        .route("/namespaces/{namespace}/trends", get(ns_ctr::namespace_trends))
         .route("/namespaces/efficiency", get(ns_ctr::namespaces_efficiency))
         .route("/namespaces/{namespace}/efficiency", get(ns_ctr::namespace_efficiency))
 
@@ -80,4 +80,3 @@ pub fn metrics_routes() -> Router {
         .route("/cluster/trends", get(cluster_ctr::cluster_trends))
         .route("/cluster/efficiency", get(cluster_ctr::cluster_efficiency))
 }
-

@@ -4,74 +4,45 @@ use serde_json::Value;
 use crate::api::controller::metric::metrics_controller;
 use crate::api::dto::ApiResponse;
 use crate::api::dto::metrics_dto::RangeQuery;
+use crate::domain::metrics::service::metric_k8s_pod_service as svc;
 
 // ---- Pods ----
 pub async fn pods_list(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "list", None, metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pods_list(q).await)
 }
 
 pub async fn pod_get(Path(pod_uid): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "get", Some(pod_uid), metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pod_get(pod_uid, q).await)
 }
 
 pub async fn pods_cost(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "cost", None, metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pods_cost(q).await)
 }
 
 pub async fn pod_cost(Path(pod_uid): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "cost", Some(pod_uid), metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pod_cost(pod_uid, q).await)
 }
 
 pub async fn pods_summary(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "summary", None, metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pods_summary(q).await)
 }
 
 pub async fn pod_summary(Path(pod_uid): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "summary", Some(pod_uid), metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pod_summary(pod_uid, q).await)
 }
 
 pub async fn pods_trends(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "trends", None, metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pods_trends(q).await)
 }
 
 pub async fn pod_trends(Path(pod_uid): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "trends", Some(pod_uid), metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pod_trends(pod_uid, q).await)
 }
 
 pub async fn pods_efficiency(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "efficiency", None, metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pods_efficiency(q).await)
 }
 
 pub async fn pod_efficiency(Path(pod_uid): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    match crate::domain::metrics::usecase::handle_request("pods", "efficiency", Some(pod_uid), metrics_controller::to_params(q)).await {
-        Ok(v) => Json(ApiResponse::ok(v)),
-        Err(e) => Json(ApiResponse::err(e.to_string())),
-    }
+    metrics_controller::to_json(svc::pod_efficiency(pod_uid, q).await)
 }

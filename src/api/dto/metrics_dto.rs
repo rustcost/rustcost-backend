@@ -1,10 +1,10 @@
 //! Metrics API DTOs
 
 use chrono::NaiveDateTime;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// Common time range + pagination query parameters
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct RangeQuery {
     pub start: Option<NaiveDateTime>,
     pub end: Option<NaiveDateTime>,
