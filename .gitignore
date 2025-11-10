@@ -32,3 +32,6 @@ cache/
 
 # --- OS files ---
 Thumbs.db
+
+# --- ETC ---
+.todo
