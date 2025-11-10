@@ -8,4 +8,5 @@ pub mod client_k8s_node_dto;
 pub mod client_k8s_node_mapper;
 pub mod client_k8s_pod_mapper;
 pub mod client_k8s_container_mapper;
+pub mod client_k8s_namespace;
 

@@ -4,6 +4,7 @@ use axum::{routing::{get}, Router};
 use crate::api::controller::info::info_controller as ic;
 use crate::api::controller::info::setting::get_info_settings;
 use crate::api::controller::info::setting::upsert_info_settings;
+use crate::api::controller::info::namespace::get_k8s_namespaces;
 
 
 pub fn info_routes() -> Router {
@@ -12,6 +13,7 @@ pub fn info_routes() -> Router {
         .route("/unit-prices", get(ic::get_info_unit_prices).put(ic::upsert_info_unit_prices))
         .route("/versions", get(ic::get_info_versions))
 
+        .route("/k8s/namespaces", get(get_k8s_namespaces))
         .route("/k8s/nodes", get(ic::list_k8s_nodes))
         .route("/k8s/pods", get(ic::list_k8s_pods))
         .route("/k8s/containers", get(ic::list_k8s_containers))
