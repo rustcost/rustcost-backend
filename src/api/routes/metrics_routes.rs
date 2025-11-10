@@ -2,76 +2,82 @@
 
 use axum::{routing::get, Router};
 
-use crate::api::controller::metrics_controller as mc;
+use crate::api::controller::metric::{namespace as ns_ctr};
+use crate::api::controller::metric::{node as node_ctr};
+use crate::api::controller::metric::{cluster as cluster_ctr};
+use crate::api::controller::metric::{container as con_ctr};
+use crate::api::controller::metric::{deployment as deploy_ctr};
+use crate::api::controller::metric::{pod as pod_ctr};
+
 
 /// Build the router for metrics endpoints under /api/v1/metrics
 pub fn metrics_routes() -> Router {
     Router::new()
         // Nodes
-        .route("/nodes", get(mc::nodes_list))
-        .route("/nodes/{node_name}", get(mc::node_get))
-        .route("/nodes/cost", get(mc::nodes_cost))
-        .route("/nodes/{node_name}/cost", get(mc::node_cost))
-        .route("/nodes/summary", get(mc::nodes_summary))
-        .route("/nodes/{node_name}/summary", get(mc::node_summary))
-        .route("/nodes/trends", get(mc::nodes_trends))
-        .route("/nodes/{node_name}/trends", get(mc::node_trends))
-        .route("/nodes/efficiency", get(mc::nodes_efficiency))
-        .route("/nodes/{node_name}/efficiency", get(mc::node_efficiency))
+        .route("/nodes", get(node_ctr::nodes_list))
+        .route("/nodes/{node_name}", get(node_ctr::node_get))
+        .route("/nodes/cost", get(node_ctr::nodes_cost))
+        .route("/nodes/{node_name}/cost", get(node_ctr::node_cost))
+        .route("/nodes/summary", get(node_ctr::nodes_summary))
+        .route("/nodes/{node_name}/summary", get(node_ctr::node_summary))
+        .route("/nodes/trends", get(node_ctr::nodes_trends))
+        .route("/nodes/{node_name}/trends", get(node_ctr::node_trends))
+        .route("/nodes/efficiency", get(node_ctr::nodes_efficiency))
+        .route("/nodes/{node_name}/efficiency", get(node_ctr::node_efficiency))
 
         // Pods
-        .route("/pods", get(mc::pods_list))
-        .route("/pods/{pod_uid}", get(mc::pod_get))
-        .route("/pods/cost", get(mc::pods_cost))
-        .route("/pods/{pod_uid}/cost", get(mc::pod_cost))
-        .route("/pods/summary", get(mc::pods_summary))
-        .route("/pods/{pod_uid}/summary", get(mc::pod_summary))
-        .route("/pods/trends", get(mc::pods_trends))
-        .route("/pods/{pod_uid}/trends", get(mc::pod_trends))
-        .route("/pods/efficiency", get(mc::pods_efficiency))
-        .route("/pods/{pod_uid}/efficiency", get(mc::pod_efficiency))
+        .route("/pods", get(pod_ctr::pods_list))
+        .route("/pods/{pod_uid}", get(pod_ctr::pod_get))
+        .route("/pods/cost", get(pod_ctr::pods_cost))
+        .route("/pods/{pod_uid}/cost", get(pod_ctr::pod_cost))
+        .route("/pods/summary", get(pod_ctr::pods_summary))
+        .route("/pods/{pod_uid}/summary", get(pod_ctr::pod_summary))
+        .route("/pods/trends", get(pod_ctr::pods_trends))
+        .route("/pods/{pod_uid}/trends", get(pod_ctr::pod_trends))
+        .route("/pods/efficiency", get(pod_ctr::pods_efficiency))
+        .route("/pods/{pod_uid}/efficiency", get(pod_ctr::pod_efficiency))
 
         // Containers
-        .route("/containers", get(mc::containers_list))
-        .route("/containers/{id}", get(mc::container_get))
-        .route("/containers/cost", get(mc::containers_cost))
-        .route("/containers/{id}/cost", get(mc::container_cost))
-        .route("/containers/summary", get(mc::containers_summary))
-        .route("/containers/{id}/summary", get(mc::container_summary))
-        .route("/containers/trends", get(mc::containers_trends))
-        .route("/containers/{id}/trends", get(mc::container_trends))
-        .route("/containers/efficiency", get(mc::containers_efficiency))
-        .route("/containers/{id}/efficiency", get(mc::container_efficiency))
+        .route("/containers", get(con_ctr::containers_list))
+        .route("/containers/{id}", get(con_ctr::container_get))
+        .route("/containers/cost", get(con_ctr::containers_cost))
+        .route("/containers/{id}/cost", get(con_ctr::container_cost))
+        .route("/containers/summary", get(con_ctr::containers_summary))
+        .route("/containers/{id}/summary", get(con_ctr::container_summary))
+        .route("/containers/trends", get(con_ctr::containers_trends))
+        .route("/containers/{id}/trends", get(con_ctr::container_trends))
+        .route("/containers/efficiency", get(con_ctr::containers_efficiency))
+        .route("/containers/{id}/efficiency", get(con_ctr::container_efficiency))
 
         // Namespaces
-        .route("/namespaces", get(mc::namespaces_list))
-        .route("/namespaces/{namespace}", get(mc::namespace_get))
-        .route("/namespaces/cost", get(mc::namespaces_cost))
-        .route("/namespaces/{namespace}/cost", get(mc::namespace_cost))
-        .route("/namespaces/summary", get(mc::namespaces_summary))
-        .route("/namespaces/{namespace}/summary", get(mc::namespace_summary))
-        .route("/namespaces/trends", get(mc::namespaces_trends))
-        .route("/namespaces/{namespace}/trends", get(mc::namespaces_trends))
-        .route("/namespaces/efficiency", get(mc::namespaces_efficiency))
-        .route("/namespaces/{namespace}/efficiency", get(mc::namespace_efficiency))
+        .route("/namespaces", get(ns_ctr::namespaces_list))
+        .route("/namespaces/{namespace}", get(ns_ctr::namespace_get))
+        .route("/namespaces/cost", get(ns_ctr::namespaces_cost))
+        .route("/namespaces/{namespace}/cost", get(ns_ctr::namespace_cost))
+        .route("/namespaces/summary", get(ns_ctr::namespaces_summary))
+        .route("/namespaces/{namespace}/summary", get(ns_ctr::namespace_summary))
+        .route("/namespaces/trends", get(ns_ctr::namespaces_trends))
+        .route("/namespaces/{namespace}/trends", get(ns_ctr::namespaces_trends))
+        .route("/namespaces/efficiency", get(ns_ctr::namespaces_efficiency))
+        .route("/namespaces/{namespace}/efficiency", get(ns_ctr::namespace_efficiency))
 
         // Deployments
-        .route("/deployments", get(mc::deployments_list))
-        .route("/deployments/{deployment}", get(mc::deployment_get))
-        .route("/deployments/cost", get(mc::deployments_cost))
-        .route("/deployments/{deployment}/cost", get(mc::deployment_cost))
-        .route("/deployments/summary", get(mc::deployments_summary))
-        .route("/deployments/{deployment}/summary", get(mc::deployment_summary))
-        .route("/deployments/trends", get(mc::deployments_trends))
-        .route("/deployments/{deployment}/trends", get(mc::deployment_trends))
-        .route("/deployments/efficiency", get(mc::deployments_efficiency))
-        .route("/deployments/{deployment}/efficiency", get(mc::deployment_efficiency))
+        .route("/deployments", get(deploy_ctr::deployments_list))
+        .route("/deployments/{deployment}", get(deploy_ctr::deployment_get))
+        .route("/deployments/cost", get(deploy_ctr::deployments_cost))
+        .route("/deployments/{deployment}/cost", get(deploy_ctr::deployment_cost))
+        .route("/deployments/summary", get(deploy_ctr::deployments_summary))
+        .route("/deployments/{deployment}/summary", get(deploy_ctr::deployment_summary))
+        .route("/deployments/trends", get(deploy_ctr::deployments_trends))
+        .route("/deployments/{deployment}/trends", get(deploy_ctr::deployment_trends))
+        .route("/deployments/efficiency", get(deploy_ctr::deployments_efficiency))
+        .route("/deployments/{deployment}/efficiency", get(deploy_ctr::deployment_efficiency))
 
         // Cluster
-        .route("/cluster", get(mc::cluster_get))
-        .route("/cluster/cost", get(mc::cluster_cost))
-        .route("/cluster/summary", get(mc::cluster_summary))
-        .route("/cluster/trends", get(mc::cluster_trends))
-        .route("/cluster/efficiency", get(mc::cluster_efficiency))
+        .route("/cluster", get(cluster_ctr::cluster_get))
+        .route("/cluster/cost", get(cluster_ctr::cluster_cost))
+        .route("/cluster/summary", get(cluster_ctr::cluster_summary))
+        .route("/cluster/trends", get(cluster_ctr::cluster_trends))
+        .route("/cluster/efficiency", get(cluster_ctr::cluster_efficiency))
 }
 

@@ -1,7 +1,7 @@
 //! System routes (e.g., /api/v1/system/*)
 
 use axum::{routing::{get, post}, Router};
-use crate::api::controller::system_controller as sc;
+use crate::api::controller::system as sc;
 
 pub fn system_routes() -> Router {
     Router::new()
