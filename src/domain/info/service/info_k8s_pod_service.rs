@@ -1,10 +1,8 @@
 use anyhow::Result;
 use chrono::{Duration, Utc};
-use serde_json::to_string_pretty;
 use tracing::debug;
 use crate::api::dto::info_dto::K8sListQuery;
 use crate::core::client::k8s::client_k8s_pod::{fetch_pod_by_name_and_namespace, fetch_pod_by_uid, fetch_pods, fetch_pods_by_label, fetch_pods_by_namespace, fetch_pods_by_node};
-use crate::core::client::k8s::client_k8s_pod_dto::Pod;
 use crate::core::client::k8s::client_k8s_pod_mapper::map_pod_to_info_pod_entity;
 use crate::core::client::k8s::util::{build_client, read_token};
 use crate::core::persistence::info::k8s::pod::info_pod_api_repository_trait::InfoPodApiRepository;

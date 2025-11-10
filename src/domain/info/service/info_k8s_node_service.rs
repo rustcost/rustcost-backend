@@ -3,7 +3,7 @@ use chrono::{Duration, Utc};
 use crate::core::persistence::info::k8s::node::info_node_api_repository_trait::InfoNodeApiRepository;
 use crate::core::persistence::info::k8s::node::info_node_entity::InfoNodeEntity;
 use crate::domain::info::repository::info_k8s_node_api_repository::InfoK8sNodeApiRepositoryImpl;
-use tracing::{debug, error};
+use tracing::{debug};
 use crate::core::client::k8s::client_k8s_node::{fetch_node_by_name, fetch_nodes};
 use crate::core::client::k8s::client_k8s_node_mapper::map_node_to_node_info_entity;
 use crate::core::client::k8s::util::{build_client, read_token};
@@ -12,7 +12,7 @@ pub async fn get_info_k8s_node(node_name: String) -> Result<InfoNodeEntity> {
     let repo = InfoK8sNodeApiRepositoryImpl::default();
 
     // Load existing entity
-    let mut entity = repo.read(&node_name)?;
+    let entity = repo.read(&node_name)?;
 
     let now = Utc::now();
     let needs_refresh = match entity.last_updated_info_at {

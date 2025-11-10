@@ -208,9 +208,6 @@ impl InfoContainerFsAdapter {
             }
         }
 
-        // Use fs::replace if available (Rust 1.63+)
-        #[cfg(has_replace)]
-        fs::replace(&tmp_path, &final_path).context("Failed to finalize container info file")?;
         #[cfg(not(has_replace))]
         fs::rename(&tmp_path, &final_path).context("Failed to finalize container info file")?;
 

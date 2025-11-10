@@ -29,7 +29,18 @@ pub async fn handle_container(summary: &Summary) -> Result<bool> {
             continue;
         }
 
+        // ✅ Skip pseudo-UIDs (static pod hashes)
+        if !pod_uid.contains('-') {
+            tracing::debug!("⚠️ Skipping static pod (config hash) '{}'", pod_uid);
+            continue;
+        }
+
         for container in &pod.containers {
+            if container.name == "debug" || container.name.starts_with("debug-") {
+                tracing::debug!("🧩 Ignoring ephemeral debug container '{}'", container.name);
+                continue;
+            }
+
             // Compose a unique key for this container
             let container_key = format!("{}-{}", pod_uid, container.name);
 

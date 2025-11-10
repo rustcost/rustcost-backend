@@ -1,28 +1,9 @@
 use anyhow::{anyhow, Result};
 use reqwest::Client;
 use tracing::debug;
-
-use crate::core::client::k8s::client_k8s_pod::{fetch_pod_by_uid, fetch_pods};
+use crate::core::client::k8s::client_k8s_container_dto::{ContainerInfo, ContainerList};
+use crate::core::client::k8s::client_k8s_pod::{fetch_pod_by_name_and_namespace, fetch_pod_by_uid, fetch_pods};
 use crate::core::client::k8s::client_k8s_pod_dto::ContainerStatus;
-
-// --- Your custom structs for container summary results ---
-#[derive(Debug, Clone)]
-pub struct ContainerInfo {
-    pub container_name: String,
-    pub image: Option<String>,
-    pub pod_name: String,
-    pub namespace: String,
-    pub image_id: Option<String>,
-    pub container_id: Option<String>,
-    pub ready: Option<bool>,
-    pub restart_count: Option<i32>,
-    pub started_at: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ContainerList {
-    pub items: Vec<ContainerInfo>,
-}
 
 /// Fetch all containers across all pods
 pub async fn fetch_containers(token: &str, client: &Client) -> Result<ContainerList> {
@@ -173,4 +154,41 @@ pub async fn fetch_container_name_by_pod_uid(
 ) -> Result<String> {
     let c = fetch_container_by_name_and_pod_uid(token, client, pod_uid, container_name).await?;
     Ok(c.container_name)
+}
+
+pub async fn fetch_container_by_namespace_and_pod_name(
+    token: &str,
+    client: &Client,
+    namespace: &str,
+    pod_name: &str,
+    container_name: &str,
+) -> Result<ContainerInfo> {
+    debug!("Fetching container '{}' in pod '{}' ns '{}'", container_name, pod_name, namespace);
+    let pod = fetch_pod_by_name_and_namespace(token, client, namespace, pod_name).await?;
+
+    let status = pod
+        .status
+        .as_ref()
+        .and_then(|s| s.container_statuses.iter().find(|cs| cs.name == container_name));
+    let spec = pod
+        .spec
+        .containers
+        .iter()
+        .find(|c| c.name == container_name)
+        .ok_or_else(|| anyhow!("Container '{}' not found in pod '{}'", container_name, pod_name))?;
+
+    Ok(ContainerInfo {
+        container_name: spec.name.clone(),
+        image: spec.image.clone(),
+        pod_name: pod.metadata.name.clone(),
+        namespace: pod.metadata.namespace.clone(),
+        image_id: status.and_then(|s| s.image_id.clone()),
+        container_id: status.and_then(|s| s.container_id.clone()),
+        ready: status.and_then(|s| s.ready),
+        restart_count: status.map(|s| s.restart_count),
+        started_at: status
+            .and_then(|s| s.state.as_ref())
+            .and_then(|st| st.running.as_ref())
+            .and_then(|r| r.started_at.clone()),
+    })
 }
