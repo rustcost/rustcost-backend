@@ -144,24 +144,45 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeMinuteFsAdapter {
         let reader = BufReader::new(file);
         let mut lines = reader.lines();
 
-        // Read header first
-        let header_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
-        let header: Vec<&str> = header_line.split('|').collect();
+        // Try to read the header line
+        let first_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
 
         let mut data: Vec<MetricNodeEntity> = vec![];
+        let header: Vec<&str>;
+        // If the first line looks like a timestamp -> treat it as data
+        if first_line.starts_with("20") {
+            header = vec![
+                "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
+                "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
+                "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
+                "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
+                "FS_USED_BYTES", "FS_CAPACITY_BYTES", "FS_INODES_USED", "FS_INODES"
+            ];
 
-        for line in lines.flatten() {
-            if let Some(row) = Self::parse_line(&header, &line) {
+            // process that first line as data
+            if let Some(row) = Self::parse_line(&header, &first_line) {
                 if row.time >= start && row.time <= end {
                     data.push(row);
                 }
+            }
+        } else {
+            // otherwise treat as a header
+            header = first_line.split('|').collect();
+        }
+
+        // Now process the rest
+        for line in lines.flatten() {
+            if let Some(row) = Self::parse_line(&header, &line) {
+                if row.time < start { continue; }
+                if row.time > end { break; }
+                data.push(row);
             }
         }
 
         // Apply pagination
         let start_idx = offset.unwrap_or(0);
-        let end_idx = limit.map(|l| start_idx + l).unwrap_or(data.len());
-        let slice = data.into_iter().skip(start_idx).take(end_idx - start_idx).collect();
+        let limit = limit.unwrap_or(data.len());
+        let slice: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();
 
         Ok(slice)
     }
