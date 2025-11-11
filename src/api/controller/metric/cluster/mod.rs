@@ -6,14 +6,19 @@ use crate::domain::info::service::info_k8s_node_service;
 use crate::domain::metrics::service::metric_k8s_cluster_service;
 
 // ---- Cluster ----
-pub async fn cluster_get(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    let res = async {
+pub async fn cluster_get(
+    Query(q): Query<RangeQuery>,
+) -> Json<ApiResponse<Value>> {
+    match async {
         let nodes = info_k8s_node_service::list_k8s_nodes().await?;
         let result = metric_k8s_cluster_service::cluster_get(nodes, q).await?;
-        Ok::<Value, _>(result)
-    }.await;
-    metrics_controller::to_json(res)
+        Ok::<Value, anyhow::Error>(result)
+    }.await {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
+
 
 pub async fn cluster_cost(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
     metrics_controller::to_json(metric_k8s_cluster_service::cluster_cost(q).await)
