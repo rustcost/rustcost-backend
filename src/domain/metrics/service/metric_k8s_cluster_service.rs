@@ -1,9 +1,7 @@
-use std::fs;
 use serde_json::{json, Value};
-use anyhow::{Result, anyhow};
+use anyhow::{Result};
 use axum::extract::Query;
 use chrono::{DateTime, Utc};
-use crate::api::controller::metric::metrics_controller;
 use crate::api::dto::metrics_dto::RangeQuery;
 use crate::core::persistence::info::k8s::node::info_node_api_repository_trait::InfoNodeApiRepository;
 use crate::core::persistence::info::k8s::node::info_node_entity::InfoNodeEntity;

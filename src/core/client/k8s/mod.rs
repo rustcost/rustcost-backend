@@ -9,4 +9,9 @@ pub mod client_k8s_node_mapper;
 pub mod client_k8s_pod_mapper;
 pub mod client_k8s_container_mapper;
 pub mod client_k8s_namespace;
-
+pub mod client_k8s_deployment;
+pub mod client_k8s_persistent_volume;
+pub mod client_k8s_persistent_volume_claim;
+pub mod client_k8s_resource_quota;
+pub mod client_k8s_limit_range;
+pub mod client_k8s_hpa;

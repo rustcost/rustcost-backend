@@ -7,4 +7,9 @@ pub mod info_k8s_node_service;
 pub mod info_k8s_pod_service;
 pub mod info_k8s_container_service;
 pub mod info_namespace_service;
-
+pub mod info_k8s_deployment_service;
+pub mod info_k8s_persistent_volume_service;
+pub mod info_k8s_persistent_volume_claim_service;
+pub mod info_k8s_resource_quota_service;
+pub mod info_k8s_limit_range_service;
+pub mod info_k8s_hpa_service;
