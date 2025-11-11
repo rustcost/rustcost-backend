@@ -216,17 +216,136 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerDayFsAdapter 
         let filtered: Vec<MetricContainerEntity> = rows
             .into_iter()
             .map(|mut row| {
-                // Zero out all other columns except the one requested
                 match column_name {
                     "CPU_USAGE_NANO_CORES" => {
+                        let keep = row.cpu_usage_nano_cores;
                         row.cpu_usage_core_nano_seconds = None;
                         row.memory_usage_bytes = None;
-                        // ... set others to None as needed
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.cpu_usage_nano_cores = keep;
+                    }
+                    "CPU_USAGE_CORE_NANO_SECONDS" => {
+                        let keep = row.cpu_usage_core_nano_seconds;
+                        row.cpu_usage_nano_cores = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.cpu_usage_core_nano_seconds = keep;
                     }
                     "MEMORY_USAGE_BYTES" => {
+                        let keep = row.memory_usage_bytes;
                         row.cpu_usage_nano_cores = None;
                         row.cpu_usage_core_nano_seconds = None;
-                        // ... etc.
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.memory_usage_bytes = keep;
+                    }
+                    "MEMORY_WORKING_SET_BYTES" => {
+                        let keep = row.memory_working_set_bytes;
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.memory_working_set_bytes = keep;
+                    }
+                    "MEMORY_RSS_BYTES" => {
+                        let keep = row.memory_rss_bytes;
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_working_set_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.memory_rss_bytes = keep;
+                    }
+                    "MEMORY_PAGE_FAULTS" => {
+                        let keep = row.memory_page_faults;
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.memory_page_faults = keep;
+                    }
+                    "FS_USED_BYTES" => {
+                        let keep = row.fs_used_bytes;
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.fs_used_bytes = keep;
+                    }
+                    "FS_CAPACITY_BYTES" => {
+                        let keep = row.fs_capacity_bytes;
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = None;
+                        row.fs_capacity_bytes = keep;
+                    }
+                    "FS_INODES_USED" => {
+                        let keep = row.fs_inodes_used;
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes = None;
+                        row.fs_inodes_used = keep;
+                    }
+                    "FS_INODES" => {
+                        let keep = row.fs_inodes;
+                        row.cpu_usage_nano_cores = None;
+                        row.cpu_usage_core_nano_seconds = None;
+                        row.memory_usage_bytes = None;
+                        row.memory_working_set_bytes = None;
+                        row.memory_rss_bytes = None;
+                        row.memory_page_faults = None;
+                        row.fs_used_bytes = None;
+                        row.fs_capacity_bytes = None;
+                        row.fs_inodes_used = None;
+                        row.fs_inodes = keep;
                     }
                     _ => {}
                 }
