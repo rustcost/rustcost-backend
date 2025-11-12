@@ -4,6 +4,7 @@ use crate::core::persistence::metrics::k8s::node::hour::metric_node_hour_fs_adap
 use crate::core::persistence::metrics::k8s::node::metric_node_entity::MetricNodeEntity;
 use chrono::{DateTime, Utc};
 
+#[derive(Debug)]
 pub struct MetricNodeHourApiRepositoryImpl {
     pub adapter: MetricNodeHourFsAdapter,
 }

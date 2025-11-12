@@ -4,6 +4,7 @@ use crate::core::persistence::metrics::k8s::pod::hour::metric_pod_hour_fs_adapte
 use crate::core::persistence::metrics::k8s::pod::metric_pod_entity::MetricPodEntity;
 use chrono::{DateTime, Utc};
 
+#[derive(Debug)]
 pub struct MetricPodHourApiRepositoryImpl { pub adapter: MetricPodHourFsAdapter }
 
 impl Default for MetricPodHourApiRepositoryImpl { fn default() -> Self { Self { adapter: MetricPodHourFsAdapter } } }

@@ -46,7 +46,7 @@ impl MetricK8sNodeService {
             }
             _ => {
                 let repo = MetricNodeMinuteApiRepositoryImpl::default();
-                repo.get_row_between(node_name, start, end, None, None)
+                repo.get_row_between(node_name, start, end)
             }
         }
     }

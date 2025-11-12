@@ -4,6 +4,7 @@ use crate::core::persistence::metrics::k8s::container::day::metric_container_day
 use crate::core::persistence::metrics::k8s::container::metric_container_entity::MetricContainerEntity;
 use chrono::{DateTime, Utc};
 
+#[derive(Debug)]
 pub struct MetricContainerDayApiRepositoryImpl { pub adapter: MetricContainerDayFsAdapter }
 
 impl Default for MetricContainerDayApiRepositoryImpl { fn default() -> Self { Self { adapter: MetricContainerDayFsAdapter } } }

@@ -21,16 +21,7 @@ pub trait MetricNodeMinuteApiRepository: Send + Sync {
     }
 
     /// Read full rows between timestamps
-    fn get_row_between(
-        &self,
-        node_name: &str,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
-        limit: Option<usize>,
-        offset: Option<usize>,
-    ) -> Result<Vec<MetricNodeEntity>> {
-        self.fs_adapter()
-            .get_row_between(start, end, node_name, limit, offset)
-    }
+    fn get_row_between(&self, node_key: &str, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Vec<MetricNodeEntity>>;
+
 
 }

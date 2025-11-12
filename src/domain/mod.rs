@@ -6,7 +6,6 @@
 //! - system: domain for system health/backup/etc.
 //! - common: shared domain types and services
 
-pub mod metrics;
 pub mod info;
 pub mod system;
 pub mod common;

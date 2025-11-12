@@ -19,6 +19,7 @@ use crate::core::persistence::metrics::k8s::path::{
 
 /// Adapter for container hour-level metrics.
 /// Responsible for appending hour samples to the filesystem and cleaning up old data.
+#[derive(Debug)]
 pub struct MetricContainerDayFsAdapter;
 
 impl MetricContainerDayFsAdapter {
