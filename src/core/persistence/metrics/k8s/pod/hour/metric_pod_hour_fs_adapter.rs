@@ -23,9 +23,9 @@ use crate::core::persistence::metrics::k8s::path::{
 pub struct MetricPodHourFsAdapter;
 
 impl MetricPodHourFsAdapter {
-    fn build_path(&self, pod_uid: &str) -> PathBuf {
-        let month = Utc::now().format("%Y-%m").to_string();
-        metric_k8s_pod_key_hour_file_path(pod_uid, &month)
+    fn build_path_for(&self, pod_uid: &str, date: NaiveDate) -> PathBuf {
+        let month_str = date.format("%Y-%m").to_string();
+        metric_k8s_pod_key_hour_file_path(pod_uid, &month_str)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {
@@ -75,7 +75,8 @@ impl MetricPodHourFsAdapter {
 
 impl MetricFsAdapterBase<MetricPodEntity> for MetricPodHourFsAdapter {
     fn append_row(&self, pod: &str, dto: &MetricPodEntity) -> Result<()> {
-        let path_str = self.build_path(pod);
+        let now_date = Utc::now().date_naive();
+        let path_str = self.build_path_for(pod, now_date);
         let path = Path::new(&path_str);
 
         if let Some(parent) = path.parent() {
@@ -241,59 +242,125 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodHourFsAdapter {
         limit: Option<usize>,
         offset: Option<usize>,
     ) -> Result<Vec<MetricPodEntity>> {
-        let path = self.build_path(object_name);
-        let path_obj = Path::new(&path);
-        if !path_obj.exists() {
-            return Ok(vec![]);
-        }
-
-        let file = File::open(&path_obj)?;
-        let reader = BufReader::new(file);
-        let mut lines = reader.lines();
-
-        // Try to read the header line
-        let first_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
-
         let mut data: Vec<MetricPodEntity> = vec![];
-        let header: Vec<&str>;
-        // If the first line looks like a timestamp -> treat it as data
-        if first_line.starts_with("20") {
-            header = vec![
-                "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
-                "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
-                "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
-                "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
-                "ES_USED_BYTES", "ES_CAPACITY_BYTES", "ES_INODES_USED", "ES_INODES",
-                "PV_USED_BYTES", "PV_CAPACITY_BYTES", "PV_INODES_USED", "PV_INODES"
-            ];
 
-            // process that first line as data
-            if let Some(row) = Self::parse_line(&header, &first_line) {
-                if row.time >= start && row.time <= end {
-                    data.push(row);
+        // 1️⃣ Iterate month by month between start and end
+        let mut current_date = NaiveDate::from_ymd_opt(start.year(), start.month() as u32, 1)
+            .expect("valid start date");
+        let end_date = NaiveDate::from_ymd_opt(end.year(), end.month() as u32, 1)
+            .expect("valid end date");
+
+        while current_date <= end_date {
+            let path = self.build_path_for(object_name, current_date);
+            let path_obj = Path::new(&path);
+
+            if !path_obj.exists() {
+                tracing::debug!(
+                "Hour metrics file missing for {} at month {}",
+                object_name,
+                current_date.format("%Y-%m")
+            );
+                // Move to next month
+                current_date = if current_date.month() == 12 {
+                    NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1).unwrap()
+                } else {
+                    NaiveDate::from_ymd_opt(current_date.year(), current_date.month() + 1, 1).unwrap()
+                };
+                continue;
+            }
+
+            let file = match File::open(&path_obj) {
+                Ok(f) => f,
+                Err(e) => {
+                    tracing::warn!("Could not open {:?}: {}", path_obj, e);
+                    current_date = if current_date.month() == 12 {
+                        NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1).unwrap()
+                    } else {
+                        NaiveDate::from_ymd_opt(current_date.year(), current_date.month() + 1, 1).unwrap()
+                    };
+                    continue;
+                }
+            };
+
+            let reader = BufReader::new(file);
+            let mut lines = reader.lines();
+
+            // 2️⃣ Try to read the first line (header or data)
+            let first_line_opt = lines.next();
+            if first_line_opt.is_none() {
+                current_date = if current_date.month() == 12 {
+                    NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1).unwrap()
+                } else {
+                    NaiveDate::from_ymd_opt(current_date.year(), current_date.month() + 1, 1).unwrap()
+                };
+                continue;
+            }
+
+            let first_line = first_line_opt.unwrap_or_else(|| Ok(String::new()))?;
+            let mut rows: Vec<MetricPodEntity> = vec![];
+            let header: Vec<&str>;
+
+            // Handle header or first data line
+            if first_line.starts_with("20") {
+                header = vec![
+                    "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
+                    "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
+                    "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
+                    "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
+                    "ES_USED_BYTES", "ES_CAPACITY_BYTES", "ES_INODES_USED", "ES_INODES",
+                    "PV_USED_BYTES", "PV_CAPACITY_BYTES", "PV_INODES_USED", "PV_INODES"
+                ];
+
+                if let Some(row) = Self::parse_line(&header, &first_line) {
+                    if row.time >= start && row.time <= end {
+                        rows.push(row);
+                    }
+                }
+            } else {
+                header = first_line.split('|').collect();
+            }
+
+            // 3️⃣ Process the rest of the lines
+            for line in lines.flatten() {
+                if let Some(row) = Self::parse_line(&header, &line) {
+                    if row.time < start {
+                        continue;
+                    }
+                    if row.time > end {
+                        break;
+                    }
+                    rows.push(row);
                 }
             }
-        } else {
-            // otherwise treat as a header
-            header = first_line.split('|').collect();
+
+            data.append(&mut rows);
+
+            // Move to next month
+            current_date = if current_date.month() == 12 {
+                NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1).unwrap()
+            } else {
+                NaiveDate::from_ymd_opt(current_date.year(), current_date.month() + 1, 1).unwrap()
+            };
         }
 
-        // Now process the rest
-        for line in lines.flatten() {
-            if let Some(row) = Self::parse_line(&header, &line) {
-                if row.time < start { continue; }
-                if row.time > end { break; }
-                data.push(row);
-            }
-        }
+        // 4️⃣ Sort and paginate
+        data.sort_by_key(|r| r.time);
 
-        // Apply pagination
         let start_idx = offset.unwrap_or(0);
         let limit = limit.unwrap_or(data.len());
         let slice: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();
 
+        tracing::debug!(
+        "Returning {} hour rows for {} between {} and {}",
+        slice.len(),
+        object_name,
+        start,
+        end
+    );
+
         Ok(slice)
     }
+
 
     fn get_column_between(
         &self,

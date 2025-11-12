@@ -23,9 +23,9 @@ use crate::core::persistence::metrics::k8s::path::{
 pub struct MetricPodDayFsAdapter;
 
 impl MetricPodDayFsAdapter {
-    fn build_path(&self, pod_key: &str) -> PathBuf {
-        let year = Utc::now().format("%Y").to_string();
-        metric_k8s_pod_key_day_file_path(pod_key, &year)
+    fn build_path_for(&self, pod_uid: &str, date: chrono::NaiveDate) -> PathBuf {
+        let year_str = date.format("%Y").to_string();
+        metric_k8s_pod_key_day_file_path(pod_uid, &year_str)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricPodEntity> {
@@ -75,7 +75,8 @@ impl MetricPodDayFsAdapter {
 
 impl MetricFsAdapterBase<MetricPodEntity> for MetricPodDayFsAdapter {
     fn append_row(&self, pod: &str, dto: &MetricPodEntity) -> Result<()> {
-        let path_str = self.build_path(pod);
+        let now_date = Utc::now().date_naive();
+        let path_str = self.build_path_for(pod, now_date);
         let path = Path::new(&path_str);
 
         if let Some(parent) = path.parent() {
@@ -628,7 +629,6 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodDayFsAdapter {
 
         Ok(filtered)
     }
-
     fn get_row_between(
         &self,
         start: DateTime<Utc>,
@@ -637,57 +637,103 @@ impl MetricFsAdapterBase<MetricPodEntity> for MetricPodDayFsAdapter {
         limit: Option<usize>,
         offset: Option<usize>,
     ) -> Result<Vec<MetricPodEntity>> {
-        let path = self.build_path(object_name);
-        let path_obj = Path::new(&path);
-        if !path_obj.exists() {
-            return Ok(vec![]);
-        }
-
-        let file = File::open(&path_obj)?;
-        let reader = BufReader::new(file);
-        let mut lines = reader.lines();
-
-        // Try to read the header line
-        let first_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
-
         let mut data: Vec<MetricPodEntity> = vec![];
-        let header: Vec<&str>;
-        // If the first line looks like a timestamp -> treat it as data
-        if first_line.starts_with("20") {
-            header = vec![
-                "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
-                "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
-                "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
-                "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
-                "ES_USED_BYTES", "ES_CAPACITY_BYTES", "ES_INODES_USED", "ES_INODES",
-                "PV_USED_BYTES", "PV_CAPACITY_BYTES", "PV_INODES_USED", "PV_INODES"
-            ];
 
-            // process that first line as data
-            if let Some(row) = Self::parse_line(&header, &first_line) {
-                if row.time >= start && row.time <= end {
-                    data.push(row);
+        // 1️⃣ Iterate year-by-year across the range
+        let mut current_year = start.year();
+        let end_year = end.year();
+
+        while current_year <= end_year {
+            let date = chrono::NaiveDate::from_ymd_opt(current_year, 1, 1)
+                .ok_or_else(|| anyhow!("invalid date for year {current_year}"))?;
+            let path = self.build_path_for(object_name, date);
+            let path_obj = Path::new(&path);
+
+            if !path_obj.exists() {
+                tracing::debug!(
+                "Day metrics file missing for pod {} in year {}",
+                object_name,
+                current_year
+            );
+                current_year += 1;
+                continue;
+            }
+
+            let file = match File::open(&path_obj) {
+                Ok(f) => f,
+                Err(e) => {
+                    tracing::warn!("Could not open {:?}: {}", path_obj, e);
+                    current_year += 1;
+                    continue;
+                }
+            };
+
+            let reader = BufReader::new(file);
+            let mut lines = reader.lines();
+
+            // 2️⃣ Try to read the first line (header or data)
+            let first_line_opt = lines.next();
+            if first_line_opt.is_none() {
+                current_year += 1;
+                continue;
+            }
+
+            let first_line = first_line_opt.unwrap_or_else(|| Ok(String::new()))?;
+            let mut rows: Vec<MetricPodEntity> = vec![];
+            let header: Vec<&str>;
+
+            if first_line.starts_with("20") {
+                header = vec![
+                    "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
+                    "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
+                    "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
+                    "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
+                    "ES_USED_BYTES", "ES_CAPACITY_BYTES", "ES_INODES_USED", "ES_INODES",
+                    "PV_USED_BYTES", "PV_CAPACITY_BYTES", "PV_INODES_USED", "PV_INODES"
+                ];
+
+                if let Some(row) = Self::parse_line(&header, &first_line) {
+                    if row.time >= start && row.time <= end {
+                        rows.push(row);
+                    }
+                }
+            } else {
+                header = first_line.split('|').collect();
+            }
+
+            // 3️⃣ Process the remaining lines
+            for line in lines.flatten() {
+                if let Some(row) = Self::parse_line(&header, &line) {
+                    if row.time < start {
+                        continue;
+                    }
+                    if row.time > end {
+                        break;
+                    }
+                    rows.push(row);
                 }
             }
-        } else {
-            // otherwise treat as a header
-            header = first_line.split('|').collect();
+
+            data.append(&mut rows);
+            current_year += 1;
         }
 
-        // Now process the rest
-        for line in lines.flatten() {
-            if let Some(row) = Self::parse_line(&header, &line) {
-                if row.time < start { continue; }
-                if row.time > end { break; }
-                data.push(row);
-            }
-        }
+        // 4️⃣ Sort and paginate
+        data.sort_by_key(|r| r.time);
 
-        // Apply pagination
         let start_idx = offset.unwrap_or(0);
         let limit = limit.unwrap_or(data.len());
         let slice: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();
 
+        tracing::debug!(
+        "Returning {} day rows for pod {} between {} and {}",
+        slice.len(),
+        object_name,
+        start,
+        end
+    );
+
         Ok(slice)
     }
+
 }

@@ -1,7 +1,7 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::k8s::container::metric_container_entity::MetricContainerEntity;
 use anyhow::{anyhow, Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc, Datelike};
 use std::io::BufWriter;
 use std::{
     fs::File,
@@ -12,10 +12,7 @@ use std::{
 };
 use std::path::PathBuf;
 use crate::core::persistence::metrics::k8s::container::hour::metric_container_hour_fs_adapter::MetricContainerHourFsAdapter;
-use crate::core::persistence::metrics::k8s::path::{
-    metric_k8s_container_key_day_dir_path,
-    metric_k8s_container_key_day_file_path,
-};
+use crate::core::persistence::metrics::k8s::path::{metric_k8s_container_key_day_dir_path, metric_k8s_container_key_day_file_path};
 
 /// Adapter for container hour-level metrics.
 /// Responsible for appending hour samples to the filesystem and cleaning up old data.
@@ -23,9 +20,9 @@ use crate::core::persistence::metrics::k8s::path::{
 pub struct MetricContainerDayFsAdapter;
 
 impl MetricContainerDayFsAdapter {
-    fn build_path(&self, container_key: &str) -> PathBuf {
-        let year = Utc::now().format("%Y").to_string();
-        metric_k8s_container_key_day_file_path(container_key, &year)
+    fn build_path_for(&self, node_key: &str, date: NaiveDate) -> PathBuf {
+        let year_str = date.format("%Y").to_string();
+        metric_k8s_container_key_day_file_path(node_key, &year_str)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricContainerEntity> {
@@ -67,7 +64,8 @@ impl MetricContainerDayFsAdapter {
 
 impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerDayFsAdapter {
     fn append_row(&self, container: &str, dto: &MetricContainerEntity) -> Result<()> {
-        let path_str = self.build_path(container);
+        let now_date = Utc::now().date_naive();
+        let path_str = self.build_path_for(container, now_date);
         let path = Path::new(&path_str);
 
         if let Some(parent) = path.parent() {
@@ -365,55 +363,66 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerDayFsAdapter 
         limit: Option<usize>,
         offset: Option<usize>,
     ) -> Result<Vec<MetricContainerEntity>> {
-        let path = self.build_path(object_name);
-        let path_obj = Path::new(&path);
-        if !path_obj.exists() {
-            return Ok(vec![]);
-        }
+        const HEADER: [&str; 11] = [
+            "TIME",
+            "CPU_USAGE_NANO_CORES",
+            "CPU_USAGE_CORE_NANO_SECONDS",
+            "MEMORY_USAGE_BYTES",
+            "MEMORY_WORKING_SET_BYTES",
+            "MEMORY_RSS_BYTES",
+            "MEMORY_PAGE_FAULTS",
+            "FS_USED_BYTES",
+            "FS_CAPACITY_BYTES",
+            "FS_INODES_USED",
+            "FS_INODES",
+        ];
 
-        let file = File::open(&path_obj)?;
-        let reader = BufReader::new(file);
-        let mut lines = reader.lines();
+        let mut data = Vec::new();
+        let mut current_date = start.naive_utc().date();
+        let end_date = end.naive_utc().date();
 
-        // Try to read the header line
-        let first_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
+        // ✅ Iterate over each *year* that overlaps the range
+        while current_date.year() <= end_date.year() {
+            let path = self.build_path_for(object_name, current_date);
+            let path_obj = Path::new(&path);
 
-        let mut data: Vec<MetricContainerEntity> = vec![];
-        let header: Vec<&str>;
-        // If the first line looks like a timestamp -> treat it as data
-        if first_line.starts_with("20") {
-            header = vec![
-                "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
-                "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
-                "MEMORY_PAGE_FAULTS", "FS_USED_BYTES", "FS_CAPACITY_BYTES",
-                "FS_INODES_USED", "FS_INODES"
-            ];
+            if !path_obj.exists() {
+                current_date = NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1)
+                    .unwrap_or(current_date);
+                continue;
+            }
 
-            // process that first line as data
-            if let Some(row) = Self::parse_line(&header, &first_line) {
-                if row.time >= start && row.time <= end {
-                    data.push(row);
+            if let Ok(file) = File::open(&path_obj) {
+                let reader = BufReader::new(file);
+                for line_result in reader.lines() {
+                    let line = match line_result {
+                        Ok(ref l) if !l.trim().is_empty() => l,
+                        _ => continue,
+                    };
+                    if let Some(row) = Self::parse_line(&HEADER, line) {
+                        if row.time < start {
+                            continue;
+                        }
+                        if row.time > end {
+                            break;
+                        }
+                        data.push(row);
+                    }
                 }
             }
-        } else {
-            // otherwise treat as a header
-            header = first_line.split('|').collect();
+
+            // move to next year
+            current_date = NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1)
+                .unwrap_or(current_date);
         }
 
-        // Now process the rest
-        for line in lines.flatten() {
-            if let Some(row) = Self::parse_line(&header, &line) {
-                if row.time < start { continue; }
-                if row.time > end { break; }
-                data.push(row);
-            }
-        }
-
-        // Apply pagination
+        // ✅ Sort and paginate
+        data.sort_by_key(|r| r.time);
         let start_idx = offset.unwrap_or(0);
         let limit = limit.unwrap_or(data.len());
-        let slice: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();
+        let paginated: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();
 
-        Ok(slice)
+        Ok(paginated)
     }
+
 }

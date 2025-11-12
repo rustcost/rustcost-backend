@@ -23,9 +23,9 @@ use crate::core::persistence::metrics::k8s::path::{
 pub struct MetricNodeHourFsAdapter;
 
 impl MetricNodeHourFsAdapter {
-    fn build_path(&self, node_name: &str) -> PathBuf {
-        let month = Utc::now().format("%Y-%m").to_string();
-        metric_k8s_node_key_hour_file_path(node_name, &month)
+    fn build_path(&self, node_name: &str, date: NaiveDate) -> PathBuf {
+        let month_str = date.format("%Y-%m").to_string();
+        metric_k8s_node_key_hour_file_path(node_name, &month_str)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricNodeEntity> {
@@ -71,7 +71,9 @@ impl MetricNodeHourFsAdapter {
 
 impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
     fn append_row(&self, node: &str, dto: &MetricNodeEntity) -> Result<()> {
-        let path_str = self.build_path(node);
+
+        let now_date = Utc::now().date_naive();
+        let path_str = self.build_path(node, now_date);
         let path = Path::new(&path_str);
 
         if let Some(parent) = path.parent() {
@@ -227,52 +229,84 @@ impl MetricFsAdapterBase<MetricNodeEntity> for MetricNodeHourFsAdapter {
         limit: Option<usize>,
         offset: Option<usize>,
     ) -> Result<Vec<MetricNodeEntity>> {
-        let path = self.build_path(object_name);
-        let path_obj = Path::new(&path);
-        if !path_obj.exists() {
-            return Ok(vec![]);
-        }
-
-        let file = File::open(&path_obj)?;
-        let reader = BufReader::new(file);
-        let mut lines = reader.lines();
-
-        // Try to read the header line
-        let first_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
-
         let mut data: Vec<MetricNodeEntity> = vec![];
-        let header: Vec<&str>;
-        // If the first line looks like a timestamp -> treat it as data
-        if first_line.starts_with("20") {
-            header = vec![
-                "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
-                "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
-                "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
-                "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
-                "FS_USED_BYTES", "FS_CAPACITY_BYTES", "FS_INODES_USED", "FS_INODES"
-            ];
 
-            // process that first line as data
-            if let Some(row) = Self::parse_line(&header, &first_line) {
-                if row.time >= start && row.time <= end {
+        // Calculate month iteration range
+        let mut current_date = start.date_naive();
+        let end_date = end.date_naive();
+
+        while current_date <= end_date {
+            let path = self.build_path(object_name, current_date);
+            let path_obj = Path::new(&path);
+
+            if !path_obj.exists() {
+                // Skip missing files silently
+                current_date = match current_date.with_day(1)
+                    .and_then(|d| d.succ_opt())
+                    .and_then(|next| next.with_day(1)) {
+                    Some(next_month_start) => next_month_start,
+                    None => break,
+                };
+                continue;
+            }
+
+            let file = File::open(&path_obj)?;
+            let reader = BufReader::new(file);
+            let mut lines = reader.lines();
+
+            let first_line_opt = lines.next();
+            if first_line_opt.is_none() {
+                // empty file → skip
+                current_date = current_date.succ_opt().unwrap_or(current_date);
+                continue;
+            }
+
+            let first_line = first_line_opt.unwrap_or_else(|| Ok(String::new()))?;
+            let header: Vec<&str>;
+            if first_line.starts_with("20") {
+                // implicit header
+                header = vec![
+                    "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
+                    "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
+                    "MEMORY_PAGE_FAULTS", "NETWORK_PHYSICAL_RX_BYTES", "NETWORK_PHYSICAL_TX_BYTES",
+                    "NETWORK_PHYSICAL_RX_ERRORS", "NETWORK_PHYSICAL_TX_ERRORS",
+                    "FS_USED_BYTES", "FS_CAPACITY_BYTES", "FS_INODES_USED", "FS_INODES"
+                ];
+
+                if let Some(row) = Self::parse_line(&header, &first_line) {
+                    if row.time >= start && row.time <= end {
+                        data.push(row);
+                    }
+                }
+            } else {
+                // Treat first line as header
+                header = first_line.split('|').collect();
+            }
+
+            // Read the rest safely
+            for line in lines.flatten() {
+                if let Some(row) = Self::parse_line(&header, &line) {
+                    if row.time < start { continue; }
+                    if row.time > end { break; }
                     data.push(row);
                 }
             }
-        } else {
-            // otherwise treat as a header
-            header = first_line.split('|').collect();
+
+            // Move to next month
+            let next_month = if current_date.month() == 12 {
+                NaiveDate::from_ymd_opt(current_date.year() + 1, 1, 1)
+            } else {
+                NaiveDate::from_ymd_opt(current_date.year(), current_date.month() + 1, 1)
+            };
+            current_date = match next_month {
+                Some(next) => next,
+                None => break,
+            };
         }
 
-        // Now process the rest
-        for line in lines.flatten() {
-            if let Some(row) = Self::parse_line(&header, &line) {
-                if row.time < start { continue; }
-                if row.time > end { break; }
-                data.push(row);
-            }
-        }
+        // Sort and paginate
+        data.sort_by_key(|r| r.time);
 
-        // Apply pagination
         let start_idx = offset.unwrap_or(0);
         let limit = limit.unwrap_or(data.len());
         let slice: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();

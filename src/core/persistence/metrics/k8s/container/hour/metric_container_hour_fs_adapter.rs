@@ -23,9 +23,9 @@ use crate::core::persistence::metrics::k8s::path::{
 pub struct MetricContainerHourFsAdapter;
 
 impl MetricContainerHourFsAdapter {
-    fn build_path(&self, container_key: &str) -> PathBuf {
-        let month = Utc::now().format("%Y-%m").to_string();
-        metric_k8s_container_key_hour_file_path(container_key, &month)
+    fn build_path_for(&self, container_key: &str, date: NaiveDate) -> PathBuf {
+        let month_str = date.format("%Y-%m").to_string();
+        metric_k8s_container_key_hour_file_path(container_key, &month_str)
     }
 
     fn parse_line(header: &[&str], line: &str) -> Option<MetricContainerEntity> {
@@ -67,7 +67,8 @@ impl MetricContainerHourFsAdapter {
 
 impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerHourFsAdapter {
     fn append_row(&self, container: &str, dto: &MetricContainerEntity) -> Result<()> {
-        let path_str = self.build_path(container);
+        let now_date = Utc::now().date_naive();
+        let path_str = self.build_path_for(container, now_date);
         let path = Path::new(&path_str);
 
         if let Some(parent) = path.parent() {
@@ -372,55 +373,98 @@ impl MetricFsAdapterBase<MetricContainerEntity> for MetricContainerHourFsAdapter
         limit: Option<usize>,
         offset: Option<usize>,
     ) -> Result<Vec<MetricContainerEntity>> {
-        let path = self.build_path(object_name);
-        let path_obj = Path::new(&path);
-        if !path_obj.exists() {
-            return Ok(vec![]);
-        }
+        use chrono::Months;
 
-        let file = File::open(&path_obj)?;
-        let reader = BufReader::new(file);
-        let mut lines = reader.lines();
+        let mut all_rows = Vec::new();
+        let mut current_date = start.date_naive();
+        let end_date = end.date_naive();
 
-        // Try to read the header line
-        let first_line = lines.next().ok_or_else(|| anyhow!("empty metric file"))??;
+        // 1️⃣ Iterate over all months that might contain data
+        while current_date <= end_date {
+            let path = self.build_path_for(object_name, current_date);
+            let path_obj = Path::new(&path);
 
-        let mut data: Vec<MetricContainerEntity> = vec![];
-        let header: Vec<&str>;
-        // If the first line looks like a timestamp -> treat it as data
-        if first_line.starts_with("20") {
-            header = vec![
-                "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
-                "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
-                "MEMORY_PAGE_FAULTS", "FS_USED_BYTES", "FS_CAPACITY_BYTES",
-                "FS_INODES_USED", "FS_INODES"
-            ];
+            if !path_obj.exists() {
+                tracing::debug!("Hour metrics file missing for {} on {}", object_name, current_date);
+                current_date = current_date.checked_add_months(Months::new(1)).unwrap_or(current_date);
+                continue;
+            }
 
-            // process that first line as data
-            if let Some(row) = Self::parse_line(&header, &first_line) {
-                if row.time >= start && row.time <= end {
-                    data.push(row);
+            let file = match File::open(&path_obj) {
+                Ok(f) => f,
+                Err(e) => {
+                    tracing::warn!("Cannot open {:?}: {}", path_obj, e);
+                    current_date = current_date.checked_add_months(Months::new(1)).unwrap_or(current_date);
+                    continue;
+                }
+            };
+
+            let reader = BufReader::new(file);
+            let mut lines = reader.lines();
+
+            // Handle empty files
+            let first_line = match lines.next() {
+                Some(Ok(line)) if !line.trim().is_empty() => line,
+                _ => {
+                    tracing::debug!("Empty or invalid metric file {:?}", path_obj);
+                    current_date = current_date.checked_add_months(Months::new(1)).unwrap_or(current_date);
+                    continue;
+                }
+            };
+
+            let mut rows = Vec::new();
+            let header: Vec<&str>;
+
+            // 2️⃣ Handle header or first data line
+            if first_line.starts_with("20") {
+                // Default header assumption (timestamp-first)
+                header = vec![
+                    "TIME", "CPU_USAGE_NANO_CORES", "CPU_USAGE_CORE_NANO_SECONDS",
+                    "MEMORY_USAGE_BYTES", "MEMORY_WORKING_SET_BYTES", "MEMORY_RSS_BYTES",
+                    "MEMORY_PAGE_FAULTS", "FS_USED_BYTES", "FS_CAPACITY_BYTES",
+                    "FS_INODES_USED", "FS_INODES",
+                ];
+
+                if let Some(row) = Self::parse_line(&header, &first_line) {
+                    if row.time >= start && row.time <= end {
+                        rows.push(row);
+                    }
+                }
+            } else {
+                header = first_line.split('|').collect();
+            }
+
+            // 3️⃣ Process all remaining lines safely
+            for line_result in lines {
+                let line = match line_result {
+                    Ok(l) if !l.trim().is_empty() => l,
+                    _ => continue,
+                };
+
+                if let Some(row) = Self::parse_line(&header, &line) {
+                    if row.time < start {
+                        continue;
+                    }
+                    if row.time > end {
+                        break;
+                    }
+                    rows.push(row);
+                } else {
+                    tracing::warn!("Malformed line skipped in {:?}: {}", path_obj, line);
                 }
             }
-        } else {
-            // otherwise treat as a header
-            header = first_line.split('|').collect();
+
+            all_rows.extend(rows);
+            current_date = current_date.checked_add_months(Months::new(1)).unwrap_or(current_date);
         }
 
-        // Now process the rest
-        for line in lines.flatten() {
-            if let Some(row) = Self::parse_line(&header, &line) {
-                if row.time < start { continue; }
-                if row.time > end { break; }
-                data.push(row);
-            }
-        }
-
-        // Apply pagination
+        // 4️⃣ Sort and apply pagination
+        all_rows.sort_by_key(|r| r.time);
         let start_idx = offset.unwrap_or(0);
-        let limit = limit.unwrap_or(data.len());
-        let slice: Vec<_> = data.into_iter().skip(start_idx).take(limit).collect();
+        let limit = limit.unwrap_or(all_rows.len());
+        let slice = all_rows.into_iter().skip(start_idx).take(limit).collect::<Vec<_>>();
 
         Ok(slice)
     }
+
 }
