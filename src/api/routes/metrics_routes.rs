@@ -74,8 +74,10 @@ pub fn metrics_routes() -> Router {
 
         // Cluster
         .route("/cluster", get(cluster_ctr::get_metric_k8s_cluster_raw))
-        .route("/cluster/cost", get(cluster_ctr::get_metric_k8s_cluster_summary))
-        .route("/cluster/summary", get(cluster_ctr::get_metric_k8s_cluster_cost))
-        .route("/cluster/trends", get(cluster_ctr::get_metric_k8s_cluster_trend))
-        .route("/cluster/efficiency", get(cluster_ctr::get_metric_k8s_cluster_efficiency))
+        .route("/cluster/raw/summary", get(cluster_ctr::get_metric_k8s_cluster_raw_summary))
+        .route("/cluster/raw/efficiency", get(cluster_ctr::get_metric_k8s_cluster_raw_efficiency))
+
+        .route("/cluster/cost", get(cluster_ctr::get_metric_k8s_cluster_cost))
+        .route("/cluster/cost/summary", get(cluster_ctr::get_metric_k8s_cluster_cost_summary))
+        .route("/cluster/cost/trend", get(cluster_ctr::get_metric_k8s_cluster_cost_trend))
 }

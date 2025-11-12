@@ -2,35 +2,104 @@ use axum::{extract::Query, Json};
 use serde_json::Value;
 use crate::api::controller::metric::metrics_controller;
 use crate::api::dto::{ApiResponse, metrics_dto::RangeQuery};
-use crate::domain::info::service::info_k8s_node_service;
+use crate::domain::info::service::{info_k8s_node_service, info_unit_price_service};
 use crate::domain::metric::k8s::cluster::service as metric_k8s_cluster_service;
 
-// ---- Cluster ---- (new naming)
-pub async fn get_metric_k8s_cluster_raw(
-    Query(q): Query<RangeQuery>,
-) -> Json<ApiResponse<Value>> {
+
+/// ---- Cluster Metric Endpoints ----
+///
+/// - `raw` → time-series metrics for charts
+/// - `summary` → aggregated snapshot (avg/sum)
+/// - `cost` → derived cost over time
+/// - `cost_summary` → aggregated cost snapshot
+/// - `cost_trend` → cost trend / prediction
+/// - `cost_efficiency` → ratios like cost per CPU, cost per pod, etc.
+
+
+// Time-series for charts
+pub async fn get_metric_k8s_cluster_raw(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
     match async {
         let nodes = info_k8s_node_service::list_k8s_nodes().await?;
         let result = metric_k8s_cluster_service::get_metric_k8s_cluster_raw(nodes, q).await?;
         Ok::<Value, anyhow::Error>(result)
-    }.await {
+    }
+        .await
+    {
         Ok(v) => Json(ApiResponse::ok(v)),
         Err(e) => Json(ApiResponse::err(e.to_string())),
     }
 }
 
-pub async fn get_metric_k8s_cluster_summary(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(metric_k8s_cluster_service::get_metric_k8s_cluster_summary(q).await)
+// Aggregated snapshot (avg/sum for time range)
+pub async fn get_metric_k8s_cluster_raw_summary(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let nodes = info_k8s_node_service::list_k8s_nodes().await?;
+        let result = metric_k8s_cluster_service::get_metric_k8s_cluster_raw_summary(nodes, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+        .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
+// Derived cost over time for charts
 pub async fn get_metric_k8s_cluster_cost(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(metric_k8s_cluster_service::get_metric_k8s_cluster_cost(q).await)
+    match async {
+        let nodes = info_k8s_node_service::list_k8s_nodes().await?;
+        let costs = info_unit_price_service::get_info_unit_prices().await?;
+        let result = metric_k8s_cluster_service::get_metric_k8s_cluster_cost(nodes, costs, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+        .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn get_metric_k8s_cluster_trend(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(metric_k8s_cluster_service::get_metric_k8s_cluster_trend(q).await)
+// Summarized cost (total/avg for time range)
+pub async fn get_metric_k8s_cluster_cost_summary(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let nodes = info_k8s_node_service::list_k8s_nodes().await?;
+        let costs = info_unit_price_service::get_info_unit_prices().await?;
+        let result = metric_k8s_cluster_service::get_metric_k8s_cluster_cost_summary(nodes, costs, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+        .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn get_metric_k8s_cluster_efficiency(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(metric_k8s_cluster_service::get_metric_k8s_cluster_efficiency(q).await)
+// Trendline (growth, regression, prediction)
+pub async fn get_metric_k8s_cluster_cost_trend(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let nodes = info_k8s_node_service::list_k8s_nodes().await?;
+        let costs = info_unit_price_service::get_info_unit_prices().await?;
+        let result = metric_k8s_cluster_service::get_metric_k8s_cluster_cost_trend(nodes, costs, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+        .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
+}
+
+// Ratios (cost per CPU, cost per pod, etc.)
+
+pub async fn get_metric_k8s_cluster_raw_efficiency(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let nodes = info_k8s_node_service::list_k8s_nodes().await?;
+        let result = metric_k8s_cluster_service::get_metric_k8s_cluster_raw_efficiency(nodes, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+        .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }

@@ -1,3 +1,7 @@
+pub mod metric_k8s_cost_summary_dto;
+pub mod metric_k8s_cost_trend_dto;
+pub mod metric_k8s_raw_summary_dto;
+pub mod metric_k8s_raw_efficiency_dto;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricGetResponseDto {
