@@ -2,13 +2,12 @@
 
 use axum::{routing::get, Router};
 
-use crate::api::controller::metric::{namespace as ns_ctr};
-use crate::api::controller::metric::{node as node_ctr};
-use crate::api::controller::metric::{cluster as cluster_ctr};
-use crate::api::controller::metric::{container as con_ctr};
-use crate::api::controller::metric::{deployment as deploy_ctr};
-use crate::api::controller::metric::{pod as pod_ctr};
-
+use crate::api::controller::metric::k8s::namespace as ns_ctr;
+use crate::api::controller::metric::k8s::node as node_ctr;
+use crate::api::controller::metric::k8s::container as con_ctr;
+use crate::api::controller::metric::k8s::deployment as deploy_ctr;
+use crate::api::controller::metric::k8s::pod as pod_ctr;
+use crate::api::controller::metric::k8s::cluster as cluster_ctr;
 
 /// Build the router for metrics endpoints under /api/v1/metrics
 pub fn metrics_routes() -> Router {

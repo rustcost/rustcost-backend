@@ -10,4 +10,4 @@ pub mod metrics;
 pub mod info;
 pub mod system;
 pub mod common;
-
+pub mod metric;

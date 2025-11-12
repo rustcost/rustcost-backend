@@ -1,3 +1,0 @@
-pub mod metric_node_day_api_repository;
-pub mod metric_node_hour_api_repository;
-pub mod metric_node_minute_api_repository;

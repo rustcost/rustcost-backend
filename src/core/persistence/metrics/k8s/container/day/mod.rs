@@ -1,3 +1,4 @@
 pub mod metric_container_day_fs_adapter;
 pub mod metric_container_day_processor_repository_trait;
 pub mod metric_container_day_retention_repository_traits;
+pub mod metric_container_day_api_repository_trait;

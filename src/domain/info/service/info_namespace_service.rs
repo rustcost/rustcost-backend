@@ -1,5 +1,4 @@
 use anyhow::Result;
-use reqwest::Client;
 use serde_json::Value;
 use crate::core::client::k8s::client_k8s_namespace;
 use crate::core::client::k8s::util::{build_client, read_token};

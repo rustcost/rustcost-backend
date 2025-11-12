@@ -1,3 +1,4 @@
 pub mod metric_pod_day_fs_adapter;
 pub mod metric_pod_day_processor_repository_trait;
 pub mod metric_pod_day_retention_repository_traits;
+pub mod metric_pod_day_api_repository_trait;
