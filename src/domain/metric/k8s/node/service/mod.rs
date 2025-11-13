@@ -81,43 +81,81 @@ impl MetricK8sNodeService {
 use serde_json::{json, Value};
 use crate::api::dto::metrics_dto::RangeQuery;
 
-// Legacy-compatible node service functions (moved here)
-pub async fn nodes_list(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "nodes_list not implemented yet", "query": q }))
+fn not_implemented_payload(endpoint: &str) -> Value {
+    json!({
+        "status": "not_implemented",
+        "endpoint": endpoint,
+    })
 }
 
-pub async fn node_get(node_name: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "node_get not implemented yet", "node_name": node_name, "query": q }))
+pub async fn get_metric_k8s_nodes_raw(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_nodes_raw"))
 }
 
-pub async fn nodes_cost(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "nodes_cost not implemented yet", "query": q }))
+pub async fn get_metric_k8s_nodes_raw_summary(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_nodes_raw_summary"))
 }
 
-pub async fn node_cost(node_name: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "node_cost not implemented yet", "node_name": node_name, "query": q }))
+pub async fn get_metric_k8s_nodes_raw_efficiency(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_nodes_raw_efficiency"))
 }
 
-pub async fn nodes_summary(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "nodes_summary not implemented yet", "query": q }))
+pub async fn get_metric_k8s_node_raw(node_name: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_node_raw",
+        "node_name": node_name,
+    }))
 }
 
-pub async fn node_summary(node_name: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "node_summary not implemented yet", "node_name": node_name, "query": q }))
+pub async fn get_metric_k8s_node_raw_summary(node_name: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_node_raw_summary",
+        "node_name": node_name,
+    }))
 }
 
-pub async fn nodes_trends(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "nodes_trends not implemented yet", "query": q }))
+pub async fn get_metric_k8s_node_raw_efficiency(node_name: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_node_raw_efficiency",
+        "node_name": node_name,
+    }))
 }
 
-pub async fn node_trends(node_name: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "node_trends not implemented yet", "node_name": node_name, "query": q }))
+pub async fn get_metric_k8s_nodes_cost(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_nodes_cost"))
 }
 
-pub async fn nodes_efficiency(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "nodes_efficiency not implemented yet", "query": q }))
+pub async fn get_metric_k8s_nodes_cost_summary(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_nodes_cost_summary"))
 }
 
-pub async fn node_efficiency(node_name: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "node_efficiency not implemented yet", "node_name": node_name, "query": q }))
+pub async fn get_metric_k8s_nodes_cost_trend(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_nodes_cost_trend"))
+}
+
+pub async fn get_metric_k8s_node_cost(node_name: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_node_cost",
+        "node_name": node_name,
+    }))
+}
+
+pub async fn get_metric_k8s_node_cost_summary(node_name: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_node_cost_summary",
+        "node_name": node_name,
+    }))
+}
+
+pub async fn get_metric_k8s_node_cost_trend(node_name: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_node_cost_trend",
+        "node_name": node_name,
+    }))
 }

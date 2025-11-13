@@ -1,48 +1,187 @@
-use axum::extract::{Path, Query};
-use axum::Json;
+use axum::{
+    extract::{Path, Query},
+    Json,
+};
 use serde_json::Value;
-use crate::api::controller::metric::metrics_controller;
-use crate::api::dto::ApiResponse;
-use crate::api::dto::metrics_dto::RangeQuery;
-use crate::domain::metric::k8s::pod::service as svc;
 
-// ---- Deployments ----
-pub async fn deployments_list(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployments_list(q).await)
+use crate::api::dto::{ApiResponse, metrics_dto::RangeQuery};
+use crate::domain::metric::k8s::deployment::service as metric_k8s_deployment_service;
+
+pub async fn get_metric_k8s_deployments_raw(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployments_raw(q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployment_get(Path(deployment): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployment_get(deployment, q).await)
+pub async fn get_metric_k8s_deployments_raw_summary(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployments_raw_summary(q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployments_cost(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployments_cost(q).await)
+pub async fn get_metric_k8s_deployments_raw_efficiency(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployments_raw_efficiency(q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployment_cost(Path(deployment): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployment_cost(deployment, q).await)
+pub async fn get_metric_k8s_deployment_raw(
+    Path(deployment): Path<String>,
+    Query(q): Query<RangeQuery>,
+) -> Json<ApiResponse<Value>> {
+    match async {
+        let result =
+            metric_k8s_deployment_service::get_metric_k8s_deployment_raw(deployment, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployments_summary(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployments_summary(q).await)
+pub async fn get_metric_k8s_deployment_raw_summary(
+    Path(deployment): Path<String>,
+    Query(q): Query<RangeQuery>,
+) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployment_raw_summary(deployment, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployment_summary(Path(deployment): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployment_summary(deployment, q).await)
+pub async fn get_metric_k8s_deployment_raw_efficiency(
+    Path(deployment): Path<String>,
+    Query(q): Query<RangeQuery>,
+) -> Json<ApiResponse<Value>> {
+    match async {
+        let result =
+            metric_k8s_deployment_service::get_metric_k8s_deployment_raw_efficiency(deployment, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployments_trends(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployments_trends(q).await)
+pub async fn get_metric_k8s_deployments_cost(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployments_cost(q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployment_trends(Path(deployment): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployment_trends(deployment, q).await)
+pub async fn get_metric_k8s_deployments_cost_summary(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployments_cost_summary(q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployments_efficiency(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployments_efficiency(q).await)
+pub async fn get_metric_k8s_deployments_cost_trend(Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployments_cost_trend(q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
 
-pub async fn deployment_efficiency(Path(deployment): Path<String>, Query(q): Query<RangeQuery>) -> Json<ApiResponse<Value>> {
-    metrics_controller::to_json(svc::deployment_efficiency(deployment, q).await)
+pub async fn get_metric_k8s_deployment_cost(
+    Path(deployment): Path<String>,
+    Query(q): Query<RangeQuery>,
+) -> Json<ApiResponse<Value>> {
+    match async {
+        let result = metric_k8s_deployment_service::get_metric_k8s_deployment_cost(deployment, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
 }
+
+pub async fn get_metric_k8s_deployment_cost_summary(
+    Path(deployment): Path<String>,
+    Query(q): Query<RangeQuery>,
+) -> Json<ApiResponse<Value>> {
+    match async {
+        let result =
+            metric_k8s_deployment_service::get_metric_k8s_deployment_cost_summary(deployment, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
+}
+
+pub async fn get_metric_k8s_deployment_cost_trend(
+    Path(deployment): Path<String>,
+    Query(q): Query<RangeQuery>,
+) -> Json<ApiResponse<Value>> {
+    match async {
+        let result =
+            metric_k8s_deployment_service::get_metric_k8s_deployment_cost_trend(deployment, q).await?;
+        Ok::<Value, anyhow::Error>(result)
+    }
+    .await
+    {
+        Ok(v) => Json(ApiResponse::ok(v)),
+        Err(e) => Json(ApiResponse::err(e.to_string())),
+    }
+}
+
+pub use get_metric_k8s_deployment_cost as deployment_cost;
+pub use get_metric_k8s_deployment_cost_summary as deployment_cost_summary;
+pub use get_metric_k8s_deployment_cost_trend as deployment_cost_trend;
+pub use get_metric_k8s_deployment_raw as deployment_raw;
+pub use get_metric_k8s_deployment_raw_efficiency as deployment_raw_efficiency;
+pub use get_metric_k8s_deployment_raw_summary as deployment_raw_summary;
+pub use get_metric_k8s_deployments_cost as deployments_cost;
+pub use get_metric_k8s_deployments_cost_summary as deployments_cost_summary;
+pub use get_metric_k8s_deployments_cost_trend as deployments_cost_trend;
+pub use get_metric_k8s_deployments_raw as deployments_raw;
+pub use get_metric_k8s_deployments_raw_efficiency as deployments_raw_efficiency;
+pub use get_metric_k8s_deployments_raw_summary as deployments_raw_summary;

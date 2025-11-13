@@ -2,43 +2,81 @@ use anyhow::Result;
 use serde_json::{json, Value};
 use crate::api::dto::metrics_dto::RangeQuery;
 
-// Containers service functions (moved from legacy path)
-pub async fn containers_list(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "containers_list not implemented yet", "query": q }))
+fn not_implemented_payload(endpoint: &str) -> Value {
+    json!({
+        "status": "not_implemented",
+        "endpoint": endpoint,
+    })
 }
 
-pub async fn container_get(id: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "container_get not implemented yet", "id": id, "query": q }))
+pub async fn get_metric_k8s_containers_raw(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_containers_raw"))
 }
 
-pub async fn containers_cost(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "containers_cost not implemented yet", "query": q }))
+pub async fn get_metric_k8s_containers_raw_summary(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_containers_raw_summary"))
 }
 
-pub async fn container_cost(id: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "container_cost not implemented yet", "id": id, "query": q }))
+pub async fn get_metric_k8s_containers_raw_efficiency(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_containers_raw_efficiency"))
 }
 
-pub async fn containers_summary(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "containers_summary not implemented yet", "query": q }))
+pub async fn get_metric_k8s_container_raw(id: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_container_raw",
+        "container_id": id,
+    }))
 }
 
-pub async fn container_summary(id: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "container_summary not implemented yet", "id": id, "query": q }))
+pub async fn get_metric_k8s_container_raw_summary(id: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_container_raw_summary",
+        "container_id": id,
+    }))
 }
 
-pub async fn containers_trends(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "containers_trends not implemented yet", "query": q }))
+pub async fn get_metric_k8s_container_raw_efficiency(id: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_container_raw_efficiency",
+        "container_id": id,
+    }))
 }
 
-pub async fn container_trends(id: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "container_trends not implemented yet", "id": id, "query": q }))
+pub async fn get_metric_k8s_containers_cost(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_containers_cost"))
 }
 
-pub async fn containers_efficiency(q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "containers_efficiency not implemented yet", "query": q }))
+pub async fn get_metric_k8s_containers_cost_summary(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_containers_cost_summary"))
 }
 
-pub async fn container_efficiency(id: String, q: RangeQuery) -> Result<Value> {
-    Ok(json!({ "status": "ok", "message": "container_efficiency not implemented yet", "id": id, "query": q }))
+pub async fn get_metric_k8s_containers_cost_trend(_q: RangeQuery) -> Result<Value> {
+    Ok(not_implemented_payload("get_metric_k8s_containers_cost_trend"))
+}
+
+pub async fn get_metric_k8s_container_cost(id: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_container_cost",
+        "container_id": id,
+    }))
+}
+
+pub async fn get_metric_k8s_container_cost_summary(id: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_container_cost_summary",
+        "container_id": id,
+    }))
+}
+
+pub async fn get_metric_k8s_container_cost_trend(id: String, _q: RangeQuery) -> Result<Value> {
+    Ok(json!({
+        "status": "not_implemented",
+        "endpoint": "get_metric_k8s_container_cost_trend",
+        "container_id": id,
+    }))
 }
