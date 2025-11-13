@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use serde_json::Value;
 
 use crate::api::dto::{info_dto::K8sListQuery, metrics_dto::RangeQuery};

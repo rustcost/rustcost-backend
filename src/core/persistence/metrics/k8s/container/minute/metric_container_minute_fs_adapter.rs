@@ -1,6 +1,6 @@
 use crate::core::persistence::metrics::metric_fs_adapter_base_trait::MetricFsAdapterBase;
 use crate::core::persistence::metrics::k8s::container::metric_container_entity::MetricContainerEntity;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDate, Utc};
 use std::io::BufWriter;
 use std::{
