@@ -1,4 +1,3 @@
-use chrono::{DateTime, Duration, Utc};
 use crate::domain::metric::k8s::common::dto::{MetricGranularity, MetricScope};
 use super::k8s_metric_repository_variant::K8sMetricRepositoryVariant;
 
@@ -31,6 +30,11 @@ pub fn resolve_k8s_metric_repository(
             Minute => NodeMinute(Default::default()),
             Hour => NodeHour(Default::default()),
             Day => NodeDay(Default::default()),
+        },
+        MetricScope::Namespace | MetricScope::Deployment => match granularity {
+            Minute => PodMinute(Default::default()),
+            Hour => PodHour(Default::default()),
+            Day => PodDay(Default::default()),
         },
     }
 }

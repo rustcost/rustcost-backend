@@ -22,9 +22,11 @@ pub trait MetricContainerHourApiRepository: Send + Sync {
 
     fn get_row_between(
         &self,
-        container_key: &str,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
+        container_key: &str,
+        limit: Option<usize>,
+        offset: Option<usize>,
     ) -> Result<Vec<MetricContainerEntity>>;
 }
 

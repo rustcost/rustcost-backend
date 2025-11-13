@@ -11,8 +11,16 @@ impl Default for MetricContainerDayApiRepositoryImpl { fn default() -> Self { Se
 
 impl MetricContainerDayApiRepository for MetricContainerDayApiRepositoryImpl {
     fn fs_adapter(&self) -> &dyn MetricFsAdapterBase<MetricContainerEntity> { &self.adapter }
-    fn get_row_between(&self, container_key: &str, start: DateTime<Utc>, end: DateTime<Utc>) -> anyhow::Result<Vec<MetricContainerEntity>> {
-        self.adapter.get_row_between(start, end, container_key, None, None)
+    fn get_row_between(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        container_key: &str,
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> anyhow::Result<Vec<MetricContainerEntity>> {
+        self.fs_adapter()
+            .get_row_between(start, end, container_key, limit, offset)
     }
 }
 

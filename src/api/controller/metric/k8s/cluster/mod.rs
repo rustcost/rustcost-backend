@@ -1,6 +1,5 @@
 use axum::{extract::Query, Json};
 use serde_json::Value;
-use crate::api::controller::metric::metrics_controller;
 use crate::api::dto::{ApiResponse, metrics_dto::RangeQuery};
 use crate::domain::info::service::{info_k8s_node_service, info_unit_price_service};
 use crate::domain::metric::k8s::cluster::service as metric_k8s_cluster_service;

@@ -92,6 +92,8 @@ pub enum MetricScope {
     Node,
     Pod,
     Container,
+    Namespace,
+    Deployment,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

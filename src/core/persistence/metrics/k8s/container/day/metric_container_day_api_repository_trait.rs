@@ -19,12 +19,13 @@ pub trait MetricContainerDayApiRepository: Send + Sync {
         self.fs_adapter()
             .get_column_between(column_name, start, end, container_key, limit, offset)
     }
-
     fn get_row_between(
         &self,
-        container_key: &str,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
+        container_key: &str,
+        limit: Option<usize>,
+        offset: Option<usize>,
     ) -> Result<Vec<MetricContainerEntity>>;
 }
 
