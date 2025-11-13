@@ -79,6 +79,7 @@ pub async fn get_metric_k8s_cluster_raw(
 
     // Optional: group or average by timestamp to aggregate across nodes
     let cluster_series = MetricSeriesDto {
+        key: "cluster".to_string(),
         name: "cluster".to_string(),
         scope: MetricScope::Cluster,
         points: aggregate_cluster_points(aggregated_points),

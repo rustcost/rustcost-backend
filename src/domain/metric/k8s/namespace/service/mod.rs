@@ -33,6 +33,7 @@ fn build_namespace_response(
         target: Some(namespace.to_string()),
         granularity: per_pod_response.granularity.clone(),
         series: vec![MetricSeriesDto {
+            key: namespace.to_string(),
             name: namespace.to_string(),
             scope: MetricScope::Namespace,
             points: aggregated_points,
@@ -55,6 +56,7 @@ async fn build_namespace_cost_response(
         target: Some(namespace.to_string()),
         granularity: per_pod_response.granularity,
         series: vec![MetricSeriesDto {
+            key: namespace.to_string(),
             name: namespace.to_string(),
             scope: MetricScope::Namespace,
             points,

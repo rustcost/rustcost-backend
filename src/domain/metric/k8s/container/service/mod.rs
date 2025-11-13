@@ -98,6 +98,7 @@ async fn build_container_raw_data(
                 .unwrap_or_else(|| key.clone());
 
             series.push(MetricSeriesDto {
+                key,
                 name,
                 scope: MetricScope::Container,
                 points,

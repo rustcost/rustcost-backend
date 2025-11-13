@@ -123,6 +123,7 @@ fn build_pod_series_for_infos(
             .unwrap_or_else(|| pod_uid.clone());
 
         series.push(MetricSeriesDto {
+            key: pod_uid,
             name,
             scope: MetricScope::Pod,
             points,

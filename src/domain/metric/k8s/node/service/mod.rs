@@ -85,6 +85,7 @@ async fn build_node_raw_data(
 
         let points = fetch_node_points(&repo, &node_name, &window)?;
         series.push(MetricSeriesDto {
+            key: node_name.clone(),
             name: node_name.clone(),
             scope: MetricScope::Node,
             points,

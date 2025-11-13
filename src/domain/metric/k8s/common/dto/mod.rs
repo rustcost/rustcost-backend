@@ -15,6 +15,21 @@ pub struct MetricGetResponseDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricSeriesDto {
+    /// Unique ID of the metric series (stable)
+    /// examples:
+    /// - node: "k8s-control-plane01"
+    /// - pod: "<pod_uid>"
+    /// - container: "<pod_uid>:<container_name>"
+    /// - namespace: "<namespace>"
+    pub key: String,
+
+    /// Human readable name (for UI)
+    /// examples:
+    /// - node: "k8s-control-plane01"
+    /// - pod: "argocd-server-12345"
+    /// - container: "argocd-server (main)"
+    /// - deployment: "argocd-server"
+    /// - namespace: "argocd"
     pub name: String,
     pub scope: MetricScope,
     pub points: Vec<UniversalMetricPointDto>,
