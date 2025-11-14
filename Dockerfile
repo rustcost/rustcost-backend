@@ -61,5 +61,5 @@ COPY --from=build /out/${APP_NAME} /usr/local/bin/${APP_NAME}
 EXPOSE 3000
 
 # Default entrypoint
-ENTRYPOINT ["rustcost"]
+ENTRYPOINT ["/usr/local/bin/rustcost-core"]
 CMD ["serve"]
