@@ -25,12 +25,13 @@ pub fn build_client() -> anyhow::Result<Client> {
     let ca_path = get_rustcost_base_path().join("ca.crt");
     let is_local = Path::new(&rustcost_ca_path) == ca_path;
 
-    let builder = Client::builder().add_root_certificate(ca);
+    let builder = Client::builder()
+        .add_root_certificate(ca);
 
     // In dev mode, allow CN mismatch for 127.0.0.1 tunnels
     let client = if is_local {
         builder
-            .danger_accept_invalid_certs(false)
+            .danger_accept_invalid_certs(true)
             .danger_accept_invalid_hostnames(true)
             .build()?
     } else {

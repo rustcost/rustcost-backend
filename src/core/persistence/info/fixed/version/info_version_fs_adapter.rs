@@ -74,11 +74,10 @@ impl InfoVersionFsAdapter {
     /// Internal helper to atomically write the version file.
     fn write(&self, data: &InfoVersionEntity) -> Result<()> {
         let path = info_version_path();
-
         if let Some(dir) = path.parent() {
             fs::create_dir_all(dir).context("Failed to create version directory")?;
         }
-        let tmp_path = path.join(".tmp");
+        let tmp_path = path.with_extension("tmp");
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         writeln!(f, "DATE:{}", data.date)?;

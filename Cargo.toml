@@ -1,6 +1,6 @@
 [package]
-name = "rustcost"
-version = "1.0.0-dev.1"
+name = "rustcost-core"
+version = "1.0.0-dev.11"
 edition = "2021"
 
 [dependencies]
@@ -17,7 +17,7 @@ tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 tracing-appender = "0.2"
 
 uuid = { version = "1.17", features = ["fast-rng", "v4", "serde"] }
-reqwest = { version = "0.12.23", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12.23", default-features = false, features = ["json", "rustls-tls-native-roots"] }
 anyhow = "1.0.100"
 tower-http = { version = "0.6.6", features = ["cors"] }
 urlencoding = "2.1.3"

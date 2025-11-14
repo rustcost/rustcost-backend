@@ -4,29 +4,28 @@
 # Build stage
 ################################################################################
 ARG RUST_VERSION=1.90.0
-ARG APP_NAME=rustcost
+ARG APP_NAME=rustcost-core
+
 FROM rust:${RUST_VERSION}-slim-bullseye AS build
 
 ARG APP_NAME
 WORKDIR /app
 
-# Install minimal build dependencies (openssl optional, remove if not used)
+# Install build dependencies (OpenSSL optional)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        pkg-config libssl-dev ca-certificates && \
+        pkg-config libssl-dev ca-certificates rsync && \
     rm -rf /var/lib/apt/lists/*
 
-# Use build cache mounts for Cargo registry & target for faster rebuilds
-RUN --mount=type=bind,source=src,target=src \
-    --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
-    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
+# Use Docker build cache for Cargo registry & target
+RUN --mount=type=bind,source=.,target=/src \
     --mount=type=cache,target=/app/target \
     --mount=type=cache,target=/usr/local/cargo/registry \
-    /bin/sh -c "\
-        set -e && \
-        cargo build --locked --release && \
+    bash -c "\
+        rsync -a /src/ . && \
+        cargo build --release --locked && \
         mkdir -p /out && \
-        cp /app/target/release/${APP_NAME} /out/${APP_NAME} \
+        cp target/release/${APP_NAME} /out/${APP_NAME} \
     "
 
 ################################################################################
@@ -35,31 +34,33 @@ RUN --mount=type=bind,source=src,target=src \
 FROM debian:bullseye-slim AS final
 
 ARG UID=10001
-ARG APP_NAME=rustcost
+ARG APP_NAME=rustcost-core
 WORKDIR /app
 
-# Install minimal runtime dependencies (e.g., SSL certs if using HTTPS)
+# Install runtime dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Add non-root user
+# Create non-root user
 RUN adduser \
     --disabled-password \
     --gecos "" \
     --home "/nonexistent" \
-    --shell "/sbin/nologin" \
+    --shell "/usr/sbin/nologin" \
     --no-create-home \
     --uid "${UID}" \
     appuser
+
+RUN mkdir -p /app/data && \
+    chown -R appuser:appuser /app
+
 USER appuser
 
-# Copy the compiled binary from the build stage
+# Copy binary
 COPY --from=build /out/${APP_NAME} /usr/local/bin/${APP_NAME}
 
-# Expose API port
 EXPOSE 3000
 
-# Default entrypoint
 ENTRYPOINT ["/usr/local/bin/rustcost-core"]
 CMD ["serve"]
