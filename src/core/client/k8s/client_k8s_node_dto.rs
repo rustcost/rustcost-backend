@@ -101,9 +101,12 @@ pub struct KubeletEndpoint {
 #[serde(rename_all = "camelCase")]
 pub struct ContainerImage {
     #[serde(default)]
-    pub names: Vec<String>,
+    pub names: Option<Vec<String>>,
     pub size_bytes: Option<u64>,
 }
+
+
+
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

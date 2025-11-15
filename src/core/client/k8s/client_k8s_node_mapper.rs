@@ -193,10 +193,12 @@ pub fn map_node_to_node_info_entity(node: &Node) -> Result<InfoNodeEntity> {
         .and_then(|s| s.images.as_ref())
         .map(|imgs| {
             let count = imgs.len() as u32;
+
             let names = imgs
                 .iter()
-                .flat_map(|i| i.names.clone())
+                .flat_map(|i| i.names.clone().unwrap_or_default())
                 .collect::<Vec<_>>();
+
             let total_size = imgs
                 .iter()
                 .filter_map(|i| i.size_bytes)

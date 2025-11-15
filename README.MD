@@ -19,6 +19,6 @@ Final production release → 1.0.0 on December 21
 ```bash
 cd C:\code\rustcost\rustcost-core
 docker build --build-arg APP_NAME=rustcost-core -t rustcost-core .
-docker tag rustcost-core kimc1992/rustcost-core:1.0.0-dev.11
-docker push kimc1992/rustcost-core:1.0.0-dev.11
+docker tag rustcost-core kimc1992/rustcost-core:1.0.0-dev.13
+docker push kimc1992/rustcost-core:1.0.0-dev.13
 ```
