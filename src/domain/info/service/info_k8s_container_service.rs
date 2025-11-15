@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use chrono::{Duration, Utc};
 use serde_json::to_string_pretty;
 use tracing::debug;
@@ -12,6 +12,7 @@ use crate::domain::info::repository::info_k8s_container_api_repository::InfoK8sC
 use std::fs;
 use crate::core::client::k8s::client_k8s_container_mapper::map_container_status_to_info_container_entity;
 use crate::core::client::k8s::client_k8s_pod::{fetch_pod_by_name_and_namespace, fetch_pods, fetch_pods_by_namespace, fetch_pods_by_node};
+use crate::domain::info::dto::info_k8s_container_patch_request::InfoK8sContainerPatchRequest;
 
 /// Fetch one container info by its unique ID, with cache + refresh if stale.
 pub async fn get_info_k8s_container(container_id: String) -> Result<InfoContainerEntity> {
@@ -157,7 +158,7 @@ pub async fn list_k8s_containers(filter: K8sListQuery) -> Result<Vec<InfoContain
                 entity.namespace = Some(ns.clone());
                 entity.pod_uid = Some(pod_uid.clone());
                 entity.container_name = Some(container_name.clone());
-                entity.container_id = Some(format!("{}:{}:{}", ns, pod_uid, container_name));
+                entity.container_id = Some(format!("{}-{}", pod_uid, container_name));
                 entity.last_updated_info_at = Some(Utc::now());
 
                 if let Err(e) = repo.update(&entity) {
@@ -173,4 +174,41 @@ pub async fn list_k8s_containers(filter: K8sListQuery) -> Result<Vec<InfoContain
     }
 
     Ok(fresh_entities)
+}
+
+pub async fn patch_info_k8s_container(
+    id: String,
+    patch: InfoK8sContainerPatchRequest,
+) -> Result<serde_json::Value> {
+    let repo = InfoK8sContainerApiRepositoryImpl::default();
+
+    // 1️⃣ Load existing record
+    let mut entity = repo.read(&id)
+        .context(format!("Cannot patch container '{}': missing info file", id))?;
+
+    if entity.pod_uid.is_none() || entity.container_name.is_none() {
+        anyhow!("Corrupt entity: missing identifiers");
+    }
+
+    // 2️⃣ Apply patch — only update fields that are Some()
+    if let Some(team) = patch.team {
+        entity.team = Some(team);
+    }
+
+    if let Some(service) = patch.service {
+        entity.service = Some(service);
+    }
+
+    if let Some(env) = patch.env {
+        entity.env = Some(env);
+    }
+
+    // 3️⃣ Update timestamp
+    entity.last_updated_info_at = Some(Utc::now());
+
+    // 4️⃣ Store back
+    repo.update(&entity)?;
+
+    // 5️⃣ Return updated JSON
+    Ok(serde_json::to_value(&entity)?)
 }

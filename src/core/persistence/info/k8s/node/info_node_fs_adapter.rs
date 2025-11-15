@@ -1,8 +1,8 @@
 use super::info_node_entity::InfoNodeEntity;
 use crate::core::persistence::info::k8s::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use std::{fs::{self, File}, io::{BufRead, BufReader, Write}, path::Path};
-use crate::core::persistence::info::path::{info_k8s_node_key_dir_path, info_k8s_node_file_path};
+use crate::core::persistence::info::path::{info_k8s_node_key_dir_path, info_k8s_node_file_path, info_k8s_container_file_path};
 
 /// File-based FS adapter for the `InfoNodeEntity`.
 ///
@@ -16,10 +16,10 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
     /// Reads the node info file into memory.
     /// Returns a default entity if the file does not exist.
     fn read(&self, node_name: &str) -> Result<InfoNodeEntity> {
-        let path = info_k8s_node_file_path(node_name);
 
+        let path = info_k8s_node_file_path(node_name);
         if !Path::new(&path).exists() {
-            return Ok(InfoNodeEntity::default());
+            return Err(anyhow!("Missing Node info file '{}'", path.display()));
         }
 
         let file = File::open(&path).context("Failed to open node info file")?;
@@ -63,6 +63,10 @@ impl InfoDynamicFsAdapterTrait<InfoNodeEntity> for InfoNodeFsAdapter {
                     "IMAGE_COUNT" => v.image_count = val.parse().ok(),
                     "IMAGE_NAMES" => v.image_names = Some(val.split(',').map(|s| s.trim().to_string()).collect()),
                     "IMAGE_TOTAL_SIZE_BYTES" => v.image_total_size_bytes = val.parse().ok(),
+
+                    "TEAM" => v.team = Some(val),
+                    "SERVICE" => v.service = Some(val),
+                    "ENV" => v.env = Some(val),
                     _ => {}
                 }
             }
@@ -168,7 +172,9 @@ impl InfoNodeFsAdapter {
         write_field!("IMAGE_COUNT", data.image_count.map(|v| v.to_string()));
         write_field!("IMAGE_NAMES", data.image_names.clone().map(|v| v.join(",")));
         write_field!("IMAGE_TOTAL_SIZE_BYTES", data.image_total_size_bytes.map(|v| v.to_string()));
-
+        write_field!("TEAM", data.team.clone());
+        write_field!("SERVICE", data.service.clone());
+        write_field!("ENV", data.env.clone());
         f.flush()?;
         fs::rename(&tmp_path, &final_path).context("Failed to finalize node info file")?;
         Ok(())

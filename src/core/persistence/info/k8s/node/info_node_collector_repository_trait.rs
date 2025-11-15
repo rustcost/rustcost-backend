@@ -8,11 +8,6 @@ use anyhow::Result;
 pub trait InfoNodeCollectorRepository: Send + Sync {
     fn fs_adapter(&self) -> &dyn InfoDynamicFsAdapterTrait<InfoNodeEntity>;
 
-    /// Reads node info for a specific node.
-    fn read(&self, node_name: &str) -> Result<InfoNodeEntity> {
-        self.fs_adapter().read(node_name)
-    }
-
     /// Creates node info for a specific node.
     fn create(&self, data: &InfoNodeEntity) -> Result<()> {
         self.fs_adapter().insert(data)

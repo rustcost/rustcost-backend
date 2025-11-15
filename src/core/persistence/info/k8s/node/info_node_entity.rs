@@ -51,5 +51,9 @@ pub struct InfoNodeEntity {
     pub image_names: Option<Vec<String>>,
     pub image_total_size_bytes: Option<u64>,
 
+    pub team: Option<String>,
+    pub service: Option<String>,
+    pub env: Option<String>, // "dev", "stage", "prod"
+
 }
 

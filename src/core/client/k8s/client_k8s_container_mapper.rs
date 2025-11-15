@@ -107,6 +107,13 @@ pub fn map_container_status_to_info_container_entity(
         .as_ref()
         .map(|a| serde_json::to_string(a).unwrap_or_default());
 
+    let team = metadata.labels.as_ref()
+        .and_then(|labels| labels.get("team").cloned());
+    let service = metadata.labels.as_ref()
+        .and_then(|labels| labels.get("service").cloned());
+    let env = metadata.labels.as_ref()
+        .and_then(|labels| labels.get("env").cloned());
+
     // --- Build entity ---
     Ok(InfoContainerEntity {
         pod_uid,
@@ -136,6 +143,11 @@ pub fn map_container_status_to_info_container_entity(
         volume_devices: None,
         labels,
         annotations,
+
+        team,
+        service,
+        env,
+
         last_updated_info_at: Some(Utc::now()),
         deleted: Some(false),
         last_check_deleted_count: None,

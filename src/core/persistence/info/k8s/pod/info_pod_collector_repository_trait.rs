@@ -8,11 +8,6 @@ use anyhow::Result;
 pub trait InfoPodCollectorRepository: Send + Sync {
     fn fs_adapter(&self) -> &dyn InfoDynamicFsAdapterTrait<InfoPodEntity>;
 
-    /// Reads pod info for a specific pod.
-    fn read(&self, pod_name: &str) -> Result<InfoPodEntity> {
-        self.fs_adapter().read(pod_name)
-    }
-
     /// Creates pod info for a specific pod.
     fn create(&self, data: &InfoPodEntity) -> Result<()> {
         self.fs_adapter().insert(data)

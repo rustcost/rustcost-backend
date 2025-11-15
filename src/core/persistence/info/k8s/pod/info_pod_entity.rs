@@ -61,4 +61,8 @@ pub struct InfoPodEntity {
     // --- Metadata ---
     pub label: Option<String>,        // flattened "key=value,..."
     pub annotation: Option<String>,   // flattened "key=value,..."
+
+    pub team: Option<String>,
+    pub service: Option<String>,
+    pub env: Option<String>, // "dev", "stage", "prod"
 }

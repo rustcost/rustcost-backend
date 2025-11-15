@@ -8,11 +8,6 @@ use anyhow::Result;
 pub trait InfoContainerCollectorRepository: Send + Sync {
     fn fs_adapter(&self) -> &dyn InfoDynamicFsAdapterTrait<InfoContainerEntity>;
 
-    /// Reads container info for a specific container.
-    fn read(&self, container_name: &str) -> Result<InfoContainerEntity> {
-        self.fs_adapter().read(container_name)
-    }
-
     /// Creates container info for a specific container.
     fn create(&self, data: &InfoContainerEntity) -> Result<()> {
         self.fs_adapter().insert(data)

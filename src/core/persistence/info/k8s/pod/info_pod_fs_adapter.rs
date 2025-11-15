@@ -1,13 +1,13 @@
 use crate::core::persistence::info::k8s::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use crate::core::persistence::info::k8s::pod::info_pod_entity::InfoPodEntity;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
     path::Path,
 };
 use tracing::log::debug;
-use crate::core::persistence::info::path::{info_k8s_pod_key_dir_path, info_k8s_pod_file_path};
+use crate::core::persistence::info::path::{info_k8s_pod_key_dir_path, info_k8s_pod_file_path, info_k8s_container_file_path};
 
 /// File-based FS adapter for `InfoPodEntity`.
 ///
@@ -19,10 +19,10 @@ impl InfoDynamicFsAdapterTrait<InfoPodEntity> for InfoPodFsAdapter {
     /// Reads the pod info file into memory.
     /// Returns a default entity if the file does not exist.
     fn read(&self, pod_uid: &str) -> Result<InfoPodEntity> {
-        let path = info_k8s_pod_file_path(pod_uid);
 
+        let path = info_k8s_pod_file_path(pod_uid);
         if !Path::new(&path).exists() {
-            return Ok(InfoPodEntity::default());
+            return Err(anyhow!("Missing pod info file '{}'", path.display()));
         }
 
         let file = File::open(&path).context("Failed to open pod info file")?;
@@ -94,6 +94,10 @@ impl InfoDynamicFsAdapterTrait<InfoPodEntity> for InfoPodFsAdapter {
                     "LABEL" => v.label = Some(val),
                     "ANNOTATION" => v.annotation = Some(val),
 
+                    // Team / Service / Env
+                    "TEAM" => v.team = Some(val),
+                    "SERVICE" => v.service = Some(val),
+                    "ENV" => v.env = Some(val),
                     _ => {}
                 }
             }
@@ -272,6 +276,10 @@ impl InfoPodFsAdapter {
         // --- Metadata ---
         write_field!("LABEL", data.label);
         write_field!("ANNOTATION", data.annotation);
+
+        write_field!("TEAM", data.team.clone());
+        write_field!("SERVICE", data.service.clone());
+        write_field!("ENV", data.env.clone());
 
         f.flush()?;
         fs::rename(&tmp_path, &final_path).context("Failed to finalize pod info file")?;

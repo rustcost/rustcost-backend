@@ -1,6 +1,7 @@
 //! Info routes (e.g., /api/v1/info/*)
 
 use axum::{routing::get, Router};
+use axum::routing::patch;
 use crate::api::controller::info::info_controller as ic;
 use crate::api::controller::info::setting::get_info_settings;
 use crate::api::controller::info::setting::upsert_info_settings;
@@ -32,4 +33,8 @@ pub fn info_routes() -> Router {
         .route("/k8s/nodes/{node_name}", get(node::get_info_k8s_node))
         .route("/k8s/pods/{pod_uid}", get(pod::get_info_k8s_pod))
         .route("/k8s/containers/{id}", get(container::get_info_k8s_container))
+        .route("/k8s/nodes/{node_name}", patch(node::patch_info_k8s_node))
+        .route("/k8s/pods/{pod_uid}", patch(pod::patch_info_k8s_pod))
+        .route("/k8s/containers/{id}", patch(container::patch_info_k8s_container))
+
 }

@@ -69,4 +69,9 @@ pub struct InfoContainerEntity {
     pub last_updated_info_at: Option<DateTime<Utc>>,
     pub deleted: Option<bool>,
     pub last_check_deleted_count: Option<u64>,
+
+    // --- Team / Service metadata (NEW) ---
+    pub team: Option<String>,
+    pub service: Option<String>,
+    pub env: Option<String>, // "dev", "stage", "prod"
 }

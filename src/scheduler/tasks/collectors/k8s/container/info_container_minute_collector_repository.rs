@@ -24,11 +24,6 @@ impl InfoContainerCollectorRepository for InfoContainerCollectorRepositoryImpl {
         &self.adapter
     }
 
-    /// Reads container info for a specific container.
-    fn read(&self, container_key: &str) -> Result<InfoContainerEntity> {
-        self.adapter.read(container_key)
-    }
-
     /// Creates (inserts) container info for a specific container.
     fn create(&self, data: &InfoContainerEntity) -> Result<()> {
         self.adapter.insert(data)

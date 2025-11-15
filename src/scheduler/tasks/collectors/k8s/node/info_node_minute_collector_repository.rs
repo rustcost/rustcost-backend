@@ -24,10 +24,6 @@ impl InfoNodeCollectorRepository for InfoNodeCollectorRepositoryImpl {
         &self.adapter
     }
 
-    /// Reads node info for a specific node.
-    fn read(&self, node_name: &str) -> Result<InfoNodeEntity> {
-        self.adapter.read(node_name)
-    }
 
     /// Creates (inserts) node info for a specific node.
     fn create(&self, data: &InfoNodeEntity) -> Result<()> {

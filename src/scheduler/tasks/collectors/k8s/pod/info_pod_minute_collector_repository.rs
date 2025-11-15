@@ -24,11 +24,6 @@ impl InfoPodCollectorRepository for InfoPodCollectorRepositoryImpl {
         &self.adapter
     }
 
-    /// Reads pod info for a specific pod.
-    fn read(&self, pod_uid: &str) -> Result<InfoPodEntity> {
-        self.adapter.read(pod_uid)
-    }
-
     /// Creates (inserts) pod info for a specific pod.
     fn create(&self, data: &InfoPodEntity) -> Result<()> {
         self.adapter.insert(data)

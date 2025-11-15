@@ -1,6 +1,6 @@
 use crate::core::persistence::info::k8s::info_dynamic_fs_adapter_trait::InfoDynamicFsAdapterTrait;
 use crate::core::persistence::info::k8s::container::info_container_entity::InfoContainerEntity;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader, Write},
@@ -19,7 +19,7 @@ impl InfoDynamicFsAdapterTrait<InfoContainerEntity> for InfoContainerFsAdapter {
     fn read(&self, container_key: &str) -> Result<InfoContainerEntity> {
         let path = info_k8s_container_file_path(container_key);
         if !Path::new(&path).exists() {
-            return Ok(InfoContainerEntity::default());
+            return Err(anyhow!("Missing container info file '{}'", path.display()));
         }
 
         let file = File::open(&path).context("Failed to open container info file")?;
@@ -71,6 +71,11 @@ impl InfoDynamicFsAdapterTrait<InfoContainerEntity> for InfoContainerFsAdapter {
                     // Metadata
                     "LABELS" => v.labels = Some(val),
                     "ANNOTATIONS" => v.annotations = Some(val),
+
+                    // Team / Service / Env
+                    "TEAM" => v.team = Some(val),
+                    "SERVICE" => v.service = Some(val),
+                    "ENV" => v.env = Some(val),
 
                     // Bookkeeping
                     "LAST_UPDATED_INFO_AT" => v.last_updated_info_at = val.parse().ok(),
@@ -148,11 +153,13 @@ impl InfoContainerFsAdapter {
         let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
         macro_rules! write_field {
-        ($key:expr, $val:expr) => {
-            let val_str = $val.clone().map_or(String::new(), |v| v.to_string());
-            writeln!(f, "{}:{}", $key, val_str)?;
-        };
-    }
+            ($key:expr, $val:expr) => {
+                match &$val {
+                    Some(v) => writeln!(f, "{}:{}", $key, v)?,
+                    None => writeln!(f, "{}:", $key)?,
+                }
+            };
+        }
 
         // Identity
         write_field!("POD_UID", data.pod_uid);
@@ -193,10 +200,15 @@ impl InfoContainerFsAdapter {
         write_field!("LABELS", data.labels);
         write_field!("ANNOTATIONS", data.annotations);
 
+        write_field!("TEAM", data.team.clone());
+        write_field!("SERVICE", data.service.clone());
+        write_field!("ENV", data.env.clone());
+
         // Bookkeeping
         write_field!("LAST_UPDATED_INFO_AT", data.last_updated_info_at.map(|t| t.to_string()));
         write_field!("DELETED", data.deleted.map(|v| v.to_string()));
         write_field!("LAST_CHECK_DELETED_COUNT", data.last_check_deleted_count.map(|v| v.to_string()));
+
 
         f.flush()?;
 

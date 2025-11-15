@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 use crate::core::persistence::info::k8s::node::info_node_api_repository_trait::InfoNodeApiRepository;
 use crate::core::persistence::info::k8s::node::info_node_entity::InfoNodeEntity;
@@ -7,6 +7,9 @@ use tracing::{debug};
 use crate::core::client::k8s::client_k8s_node::{fetch_node_by_name, fetch_nodes};
 use crate::core::client::k8s::client_k8s_node_mapper::map_node_to_node_info_entity;
 use crate::core::client::k8s::util::{build_client, read_token};
+use crate::domain::info::dto::info_k8s_container_patch_request::InfoK8sContainerPatchRequest;
+use crate::domain::info::dto::info_k8s_node_patch_request::InfoK8sNodePatchRequest;
+use crate::domain::info::repository::info_k8s_container_api_repository::InfoK8sContainerApiRepositoryImpl;
 
 pub async fn get_info_k8s_node(node_name: String) -> Result<InfoNodeEntity> {
     let repo = InfoK8sNodeApiRepositoryImpl::default();
@@ -96,4 +99,39 @@ pub async fn list_k8s_nodes() -> Result<Vec<InfoNodeEntity>> {
     }
 
     Ok(result_entities)
+}
+
+
+pub async fn patch_info_k8s_node(
+    id: String,
+    patch: InfoK8sNodePatchRequest,
+) -> Result<serde_json::Value> {
+    let repo = InfoK8sNodeApiRepositoryImpl::default();
+
+    // 1️⃣ Load existing record
+    let mut entity = repo
+        .read(&id)
+        .map_err(|_| anyhow!("Node '{}' not found", id))?;
+
+    // 2️⃣ Apply patch — only update fields that are Some()
+    if let Some(team) = patch.team {
+        entity.team = Some(team);
+    }
+
+    if let Some(service) = patch.service {
+        entity.service = Some(service);
+    }
+
+    if let Some(env) = patch.env {
+        entity.env = Some(env);
+    }
+
+    // 3️⃣ Update timestamp
+    entity.last_updated_info_at = Some(Utc::now());
+
+    // 4️⃣ Store back
+    repo.update(&entity)?;
+
+    // 5️⃣ Return updated JSON
+    Ok(serde_json::to_value(&entity)?)
 }

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use chrono::{Duration, Utc};
 use tracing::debug;
 use crate::api::dto::info_dto::K8sListQuery;
@@ -10,6 +10,10 @@ use crate::core::persistence::info::k8s::pod::info_pod_entity::InfoPodEntity;
 use crate::core::persistence::info::path::info_k8s_pod_dir_path;
 use crate::domain::info::repository::info_k8s_pod_api_repository::InfoK8sPodApiRepositoryImpl;
 use std::fs;
+use crate::domain::info::dto::info_k8s_node_patch_request::InfoK8sNodePatchRequest;
+use crate::domain::info::dto::info_k8s_pod_patch_request::InfoK8sPodPatchRequest;
+use crate::domain::info::repository::info_k8s_node_api_repository::InfoK8sNodeApiRepositoryImpl;
+
 pub async fn get_info_k8s_pod(pod_uid: String) -> Result<InfoPodEntity> {
     let repo = InfoK8sPodApiRepositoryImpl::default();
 
@@ -133,4 +137,38 @@ pub async fn list_k8s_pods(filter: K8sListQuery) -> Result<Vec<InfoPodEntity>> {
     }
 
     Ok(result_entities)
+}
+
+pub async fn patch_info_k8s_pod(
+    id: String,
+    patch: InfoK8sPodPatchRequest,
+) -> Result<serde_json::Value> {
+    let repo = InfoK8sPodApiRepositoryImpl::default();
+
+    // 1️⃣ Load existing record
+    let mut entity = repo
+        .read(&id)
+        .map_err(|_| anyhow!("Node '{}' not found", id))?;
+
+    // 2️⃣ Apply patch — only update fields that are Some()
+    if let Some(team) = patch.team {
+        entity.team = Some(team);
+    }
+
+    if let Some(service) = patch.service {
+        entity.service = Some(service);
+    }
+
+    if let Some(env) = patch.env {
+        entity.env = Some(env);
+    }
+
+    // 3️⃣ Update timestamp
+    entity.last_updated_info_at = Some(Utc::now());
+
+    // 4️⃣ Store back
+    repo.update(&entity)?;
+
+    // 5️⃣ Return updated JSON
+    Ok(serde_json::to_value(&entity)?)
 }
