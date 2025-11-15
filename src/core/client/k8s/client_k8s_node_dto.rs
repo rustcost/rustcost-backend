@@ -100,6 +100,7 @@ pub struct KubeletEndpoint {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContainerImage {
+    #[serde(default)]
     pub names: Vec<String>,
     pub size_bytes: Option<u64>,
 }
