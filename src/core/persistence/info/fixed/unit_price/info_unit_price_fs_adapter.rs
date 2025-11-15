@@ -92,40 +92,59 @@ impl InfoUnitPriceFsAdapter {
     /// Writes the unit price configuration to disk atomically.
     /// All keys are written in snake_case for consistency.
     fn write(&self, data: &InfoUnitPriceEntity) -> Result<()> {
+        use std::io::Write;
         let path = info_unit_price_path();
 
+        // Ensure directory exists
         if let Some(dir) = path.parent() {
-            fs::create_dir_all(dir).context("Failed to create unit price directory")?;
+            fs::create_dir_all(dir)
+                .context("Failed to create unit price directory")?;
         }
 
+        // Temporary file path, e.g. "unit_price.tmp"
         let tmp_path = path.with_extension("tmp");
-        let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
 
-        // CPU
+        // Open temp file
+        let mut f = File::create(&tmp_path)
+            .context("Failed to create temporary unit price file")?;
+
+        // --- Write all fields ---
         writeln!(f, "cpu_core_hour:{}", data.cpu_core_hour)?;
         writeln!(f, "cpu_spot_core_hour:{}", data.cpu_spot_core_hour)?;
 
-        // Memory
         writeln!(f, "memory_gb_hour:{}", data.memory_gb_hour)?;
         writeln!(f, "memory_spot_gb_hour:{}", data.memory_spot_gb_hour)?;
 
-        // GPU
         writeln!(f, "gpu_hour:{}", data.gpu_hour)?;
         writeln!(f, "gpu_spot_hour:{}", data.gpu_spot_hour)?;
 
-        // Storage
         writeln!(f, "storage_gb_hour:{}", data.storage_gb_hour)?;
 
-        // Network
         writeln!(f, "network_local_gb:{}", data.network_local_gb)?;
         writeln!(f, "network_regional_gb:{}", data.network_regional_gb)?;
         writeln!(f, "network_external_gb:{}", data.network_external_gb)?;
 
-        // Timestamp
         writeln!(f, "updated_at:{}", data.updated_at.to_rfc3339())?;
 
+        // --- Flush + sync to ensure data is fully written to disk ---
         f.flush()?;
-        fs::rename(&tmp_path, &path).context("Failed to finalize unit price file")?;
+        f.sync_all()
+            .context("Failed to sync temporary unit price file")?;
+
+        // --- Atomically replace old file ---
+        fs::rename(&tmp_path, &path)
+            .context("Failed to finalize unit price file atomically")?;
+
+        // --- On Unix: also fsync the directory to make the rename durable ---
+        #[cfg(unix)]
+        if let Some(dir) = path.parent() {
+            let dir_file = File::open(dir)
+                .context("Failed to open directory for fsync")?;
+            dir_file.sync_all()
+                .context("Failed to fsync unit price directory")?;
+        }
+
         Ok(())
     }
 }
+

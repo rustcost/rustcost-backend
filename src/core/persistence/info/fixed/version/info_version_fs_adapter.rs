@@ -73,13 +73,24 @@ impl InfoFixedFsAdapterTrait<InfoVersionEntity> for InfoVersionFsAdapter {
 impl InfoVersionFsAdapter {
     /// Internal helper to atomically write the version file.
     fn write(&self, data: &InfoVersionEntity) -> Result<()> {
-        let path = info_version_path();
-        if let Some(dir) = path.parent() {
-            fs::create_dir_all(dir).context("Failed to create version directory")?;
-        }
-        let tmp_path = path.with_extension("tmp");
-        let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
+        use std::io::Write;
 
+        let path = info_version_path();
+
+        // Ensure parent directory exists
+        if let Some(dir) = path.parent() {
+            fs::create_dir_all(dir)
+                .context("Failed to create version directory")?;
+        }
+
+        // Temporary file: version.tmp
+        let tmp_path = path.with_extension("tmp");
+
+        // Open temporary file
+        let mut f = File::create(&tmp_path)
+            .context("Failed to create temporary version file")?;
+
+        // ----- Write all fields -----
         writeln!(f, "DATE:{}", data.date)?;
         writeln!(f, "MAJOR:{}", data.major)?;
         writeln!(f, "MINOR:{}", data.minor)?;
@@ -89,9 +100,25 @@ impl InfoVersionFsAdapter {
         writeln!(f, "GO_VERSION:{}", data.go_version)?;
         writeln!(f, "COMPILER:{}", data.compiler)?;
         writeln!(f, "PLATFORM:{}", data.platform)?;
-        f.flush()?;
 
-        fs::rename(&tmp_path, &path).context("Failed to finalize version file")?;
+        // ----- Flush + sync -----
+        f.flush()?;
+        f.sync_all()
+            .context("Failed to fsync temporary version file")?;
+
+        // ----- Atomic rename -----
+        fs::rename(&tmp_path, &path)
+            .context("Failed to finalize version file atomically")?;
+
+        // ----- fsync directory (required for true durability) -----
+        #[cfg(unix)]
+        if let Some(dir) = path.parent() {
+            let dir_file = File::open(dir)
+                .context("Failed to open version directory for fsync")?;
+            dir_file.sync_all()
+                .context("Failed to fsync version directory")?;
+        }
+
         Ok(())
     }
 }

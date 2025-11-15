@@ -141,39 +141,43 @@ impl InfoContainerFsAdapter {
     }
 
     /// Writes the info.rci file atomically.
-
-
     fn write(&self, container_key: &str, data: &InfoContainerEntity) -> Result<()> {
+        use std::io::Write;
+
         let dir = info_k8s_container_key_dir_path(container_key);
-        fs::create_dir_all(&dir).context("Failed to create container info directory")?;
+        fs::create_dir_all(&dir)
+            .context("Failed to create container info directory")?;
 
         let tmp_path = dir.join("info.rci.tmp");
         let final_path = dir.join("info.rci");
 
-        let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
+        // ---- Create temporary file ----
+        let mut f = File::create(&tmp_path)
+            .context("Failed to create temp info.rci file")?;
 
+        // Generic Option<T> writer
         macro_rules! write_field {
-            ($key:expr, $val:expr) => {
-                match &$val {
-                    Some(v) => writeln!(f, "{}:{}", $key, v)?,
-                    None => writeln!(f, "{}:", $key)?,
-                }
-            };
-        }
+        ($key:expr, $val:expr) => {
+            match &$val {
+                Some(v) => writeln!(f, "{}:{}", $key, v)?,
+                None => writeln!(f, "{}:", $key)?,
+            }
+        };
+    }
 
-        // Identity
+        // ---- Identity ----
         write_field!("POD_UID", data.pod_uid);
         write_field!("CONTAINER_NAME", data.container_name);
         write_field!("NAMESPACE", data.namespace);
 
-        // Lifecycle
+        // ---- Lifecycle ----
         write_field!("CREATION_TIMESTAMP", data.creation_timestamp.map(|t| t.to_string()));
         write_field!("START_TIME", data.start_time.map(|t| t.to_string()));
         write_field!("CONTAINER_ID", data.container_id);
         write_field!("IMAGE", data.image);
         write_field!("IMAGE_ID", data.image_id);
 
-        // Status
+        // ---- Status ----
         write_field!("STATE", data.state);
         write_field!("REASON", data.reason);
         write_field!("MESSAGE", data.message);
@@ -181,48 +185,50 @@ impl InfoContainerFsAdapter {
         write_field!("RESTART_COUNT", data.restart_count.map(|v| v.to_string()));
         write_field!("READY", data.ready.map(|v| v.to_string()));
 
-        // Node association
+        // ---- Node association ----
         write_field!("NODE_NAME", data.node_name);
         write_field!("HOST_IP", data.host_ip);
         write_field!("POD_IP", data.pod_ip);
 
-        // Resources
+        // ---- Resources ----
         write_field!("CPU_REQUEST_MILLICORES", data.cpu_request_millicores.map(|v| v.to_string()));
         write_field!("MEMORY_REQUEST_BYTES", data.memory_request_bytes.map(|v| v.to_string()));
         write_field!("CPU_LIMIT_MILLICORES", data.cpu_limit_millicores.map(|v| v.to_string()));
         write_field!("MEMORY_LIMIT_BYTES", data.memory_limit_bytes.map(|v| v.to_string()));
 
-        // Volumes
+        // ---- Volumes ----
         write_field!("VOLUME_MOUNTS", data.volume_mounts.clone().map(|v| v.join(",")));
         write_field!("VOLUME_DEVICES", data.volume_devices.clone().map(|v| v.join(",")));
 
-        // Metadata
+        // ---- Metadata ----
         write_field!("LABELS", data.labels);
         write_field!("ANNOTATIONS", data.annotations);
 
+        // ---- Custom metadata ----
         write_field!("TEAM", data.team.clone());
         write_field!("SERVICE", data.service.clone());
         write_field!("ENV", data.env.clone());
 
-        // Bookkeeping
+        // ---- Bookkeeping ----
         write_field!("LAST_UPDATED_INFO_AT", data.last_updated_info_at.map(|t| t.to_string()));
         write_field!("DELETED", data.deleted.map(|v| v.to_string()));
         write_field!("LAST_CHECK_DELETED_COUNT", data.last_check_deleted_count.map(|v| v.to_string()));
 
-
+        // ---- Flush buffer only (NO fsync) ----
         f.flush()?;
 
-        // ✅ Windows-safe finalization
+        // ---- Windows: pre-delete needed ----
         #[cfg(windows)]
-        {
-            if final_path.exists() {
-                fs::remove_file(&final_path).ok();
-            }
+        if final_path.exists() {
+            fs::remove_file(&final_path)
+                .context("Failed to remove old info.rci before rename")?;
         }
 
-        #[cfg(not(has_replace))]
-        fs::rename(&tmp_path, &final_path).context("Failed to finalize container info file")?;
+        // ---- Atomic rename ----
+        fs::rename(&tmp_path, &final_path)
+            .context("Failed to atomically rename info.rci.tmp → info.rci")?;
 
         Ok(())
     }
+
 }

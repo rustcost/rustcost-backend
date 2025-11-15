@@ -147,15 +147,22 @@ impl InfoFixedFsAdapterTrait<InfoSettingEntity> for InfoSettingFsAdapter {
 impl InfoSettingFsAdapter {
     /// Internal helper to atomically write the settings file.
     fn write(&self, data: &InfoSettingEntity) -> Result<()> {
+        use std::io::Write;
+        use std::fs::File;
+
         let path = info_setting_path();
 
+        // Ensure parent directory exists
         if let Some(dir) = path.parent() {
             fs::create_dir_all(dir).context("Failed to create settings directory")?;
         }
 
+        // We write to a temporary file first, then atomically rename.
+        // e.g. settings.rci.tmp
         let tmp_path = path.with_extension("rci.tmp");
-        let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
+        let mut f = File::create(&tmp_path).context("Failed to create temp settings file")?;
 
+        // Write all fields
         writeln!(f, "IS_DARK_MODE:{}", data.is_dark_mode)?;
         writeln!(f, "LANGUAGE:{}", data.language)?;
         writeln!(f, "MINUTE_RETENTION_DAY:{}", data.minute_retention_days)?;
@@ -193,9 +200,23 @@ impl InfoSettingFsAdapter {
             data.k8s_api_url.clone().unwrap_or_default()
         )?;
 
+        // Make sure all data hits the disk
         f.flush()?;
+        f.sync_all().context("Failed to sync temp settings file")?;
 
+        // Atomically replace the old file with the new one
         fs::rename(&tmp_path, &path).context("Failed to finalize settings file")?;
+
+        // On Unix, also fsync the directory so the rename is durable
+        #[cfg(unix)]
+        if let Some(dir) = path.parent() {
+            use std::os::unix::fs::FileExt as _;
+            let dir_file = File::open(dir).context("Failed to open settings directory")?;
+            dir_file
+                .sync_all()
+                .context("Failed to sync settings directory")?;
+        }
+
         Ok(())
     }
 }

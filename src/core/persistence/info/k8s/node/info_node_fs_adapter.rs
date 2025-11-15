@@ -125,58 +125,94 @@ impl InfoNodeFsAdapter {
         Ok(())
     }
 
-    /// Internal helper: atomically writes a node info file.
     fn write(&self, node_name: &str, data: &InfoNodeEntity) -> Result<()> {
+        use std::io::Write;
 
         let dir = info_k8s_node_key_dir_path(node_name);
-        fs::create_dir_all(&dir).context("Failed to create node info directory")?;
+        fs::create_dir_all(&dir)
+            .context("Failed to create node info directory")?;
 
         let tmp_path = dir.join("info.rci.tmp");
         let final_path = dir.join("info.rci");
 
-        let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
+        // write to temporary file
+        let mut f = File::create(&tmp_path)
+            .context("Failed to create temporary node info file")?;
 
+        // Helper macro that handles Option<T>
         macro_rules! write_field {
-            ($key:expr, $val:expr) => {
-                writeln!(f, "{}:{}", $key, $val.unwrap_or_default())?;
-            };
-        }
+        ($key:expr, $val:expr) => {
+            match &$val {
+                Some(v) => writeln!(f, "{}:{}", $key, v)?,
+                None => writeln!(f, "{}:", $key)?,
+            }
+        };
+    }
 
-        write_field!("NODE_NAME", data.node_name.clone());
-        write_field!("NODE_UID", data.node_uid.clone());
-        write_field!("CREATION_TIMESTAMP", data.creation_timestamp.clone().map(|t| t.to_string()));
-        write_field!("RESOURCE_VERSION", data.resource_version.clone());
-        write_field!("LAST_UPDATED_INFO_AT", data.last_updated_info_at.clone().map(|t| t.to_string()));
+        // ---- Identity ----
+        write_field!("NODE_NAME", data.node_name);
+        write_field!("NODE_UID", data.node_uid);
+
+        // ---- Metadata ----
+        write_field!("CREATION_TIMESTAMP", data.creation_timestamp.map(|t| t.to_string()));
+        write_field!("RESOURCE_VERSION", data.resource_version);
+        write_field!("LAST_UPDATED_INFO_AT", data.last_updated_info_at.map(|t| t.to_string()));
         write_field!("DELETED", data.deleted.map(|v| v.to_string()));
         write_field!("LAST_CHECK_DELETED_COUNT", data.last_check_deleted_count.map(|v| v.to_string()));
-        write_field!("HOSTNAME", data.hostname.clone());
-        write_field!("INTERNAL_IP", data.internal_ip.clone());
-        write_field!("ARCHITECTURE", data.architecture.clone());
-        write_field!("OS_IMAGE", data.os_image.clone());
-        write_field!("KERNEL_VERSION", data.kernel_version.clone());
-        write_field!("KUBELET_VERSION", data.kubelet_version.clone());
-        write_field!("CONTAINER_RUNTIME", data.container_runtime.clone());
-        write_field!("OPERATING_SYSTEM", data.operating_system.clone());
+
+        // ---- Basic Info ----
+        write_field!("HOSTNAME", data.hostname);
+        write_field!("INTERNAL_IP", data.internal_ip);
+        write_field!("ARCHITECTURE", data.architecture);
+        write_field!("OS_IMAGE", data.os_image);
+        write_field!("KERNEL_VERSION", data.kernel_version);
+        write_field!("KUBELET_VERSION", data.kubelet_version);
+        write_field!("CONTAINER_RUNTIME", data.container_runtime);
+        write_field!("OPERATING_SYSTEM", data.operating_system);
+
+        // ---- Capacity ----
         write_field!("CPU_CAPACITY_CORES", data.cpu_capacity_cores.map(|v| v.to_string()));
         write_field!("MEMORY_CAPACITY_BYTES", data.memory_capacity_bytes.map(|v| v.to_string()));
         write_field!("POD_CAPACITY", data.pod_capacity.map(|v| v.to_string()));
         write_field!("EPHEMERAL_STORAGE_CAPACITY_BYTES", data.ephemeral_storage_capacity_bytes.map(|v| v.to_string()));
+
+        // ---- Allocatable ----
         write_field!("CPU_ALLOCATABLE_CORES", data.cpu_allocatable_cores.map(|v| v.to_string()));
         write_field!("MEMORY_ALLOCATABLE_BYTES", data.memory_allocatable_bytes.map(|v| v.to_string()));
         write_field!("EPHEMERAL_STORAGE_ALLOCATABLE_BYTES", data.ephemeral_storage_allocatable_bytes.map(|v| v.to_string()));
         write_field!("POD_ALLOCATABLE", data.pod_allocatable.map(|v| v.to_string()));
+
+        // ---- Status ----
         write_field!("READY", data.ready.map(|v| v.to_string()));
-        write_field!("TAINTS", data.taints.clone());
-        write_field!("LABEL", data.label.clone());
-        write_field!("ANNOTATION", data.annotation.clone());
+        write_field!("TAINTS", data.taints);
+        write_field!("LABEL", data.label);
+        write_field!("ANNOTATION", data.annotation);
+
+        // ---- Image info ----
         write_field!("IMAGE_COUNT", data.image_count.map(|v| v.to_string()));
         write_field!("IMAGE_NAMES", data.image_names.clone().map(|v| v.join(",")));
         write_field!("IMAGE_TOTAL_SIZE_BYTES", data.image_total_size_bytes.map(|v| v.to_string()));
-        write_field!("TEAM", data.team.clone());
-        write_field!("SERVICE", data.service.clone());
-        write_field!("ENV", data.env.clone());
+
+        // ---- Custom fields ----
+        write_field!("TEAM", data.team);
+        write_field!("SERVICE", data.service);
+        write_field!("ENV", data.env);
+
+        // ---- Flush only (no fsync) ----
         f.flush()?;
-        fs::rename(&tmp_path, &final_path).context("Failed to finalize node info file")?;
+
+        // ---- Windows-safe: remove existing file before rename ----
+        #[cfg(windows)]
+        if final_path.exists() {
+            fs::remove_file(&final_path)
+                .context("Failed to remove old info.rci before rename")?;
+        }
+
+        // ---- Atomic rename ----
+        fs::rename(&tmp_path, &final_path)
+            .context("Failed to atomically replace node info file")?;
+
         Ok(())
     }
+
 }

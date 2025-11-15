@@ -161,56 +161,53 @@ impl InfoDynamicFsAdapterTrait<InfoPodEntity> for InfoPodFsAdapter {
 }
 
 impl InfoPodFsAdapter {
-    /// Ensures the pod info directory exists.
     pub fn create_pod_dir_if_missing(pod_uid: &str) -> Result<()> {
         let path = info_k8s_pod_key_dir_path(pod_uid);
         fs::create_dir_all(&path).context("Failed to create pod info directory")?;
         Ok(())
     }
 
+    /// Ensures the pod info directory exists.
     pub fn write(&self, pod_uid: &str, data: &InfoPodEntity) -> Result<()> {
+        use std::io::Write;
+
         let dir = info_k8s_pod_key_dir_path(pod_uid);
-        fs::create_dir_all(&dir).context("Failed to create pod info directory")?;
+        fs::create_dir_all(&dir)
+            .context("Failed to create pod info directory")?;
 
         let tmp_path = dir.join("info.rci.tmp");
         let final_path = dir.join("info.rci");
 
-        let mut f = File::create(&tmp_path).context("Failed to create temp file")?;
+        let mut f = File::create(&tmp_path)
+            .context("Failed to create temporary pod info file")?;
 
         // --- helper macros --------------------------------------------------
-
         macro_rules! write_field {
-            ($key:expr, $val:expr) => {{
-                let val_str = match &$val {
-                    Some(v) => v.to_string(),
-                    None => String::new(),
-                };
-                debug!("✏️  Writing {}: {}", $key, val_str);
-                writeln!(f, "{}:{}", $key, val_str)?;
-            }};
-        }
+        ($key:expr, $val:expr) => {{
+            match &$val {
+                Some(v) => writeln!(f, "{}:{}", $key, v)?,
+                None => writeln!(f, "{}:", $key)?,
+            }
+        }};
+    }
 
         macro_rules! write_vec {
-            ($key:expr, $val:expr) => {{
-                let val_str = match &$val {
-                    Some(v) if !v.is_empty() => v.join(","),
-                    _ => String::new(),
-                };
-                debug!("✏️  Writing {}: {}", $key, val_str);
-                writeln!(f, "{}:{}", $key, val_str)?;
-            }};
-        }
+        ($key:expr, $val:expr) => {{
+            match &$val {
+                Some(v) if !v.is_empty() => writeln!(f, "{}:{}", $key, v.join(","))?,
+                _ => writeln!(f, "{}:", $key)?,
+            }
+        }};
+    }
 
         macro_rules! write_datetime {
-            ($key:expr, $val:expr) => {{
-                let val_str = match &$val {
-                    Some(dt) => dt.to_rfc3339(),
-                    None => String::new(),
-                };
-                debug!("✏️  Writing {}: {}", $key, val_str);
-                writeln!(f, "{}:{}", $key, val_str)?;
-            }};
-        }
+        ($key:expr, $val:expr) => {{
+            match &$val {
+                Some(dt) => writeln!(f, "{}:{}", $key, dt.to_rfc3339())?,
+                None => writeln!(f, "{}:", $key)?,
+            }
+        }};
+    }
 
         // --- Identity ---
         write_field!("POD_NAME", data.pod_name);
@@ -223,10 +220,7 @@ impl InfoPodFsAdapter {
         write_field!("RESOURCE_VERSION", data.resource_version);
         write_datetime!("LAST_UPDATED_INFO_AT", data.last_updated_info_at);
         write_field!("DELETED", data.deleted.map(|v| v.to_string()));
-        write_field!(
-            "LAST_CHECK_DELETED_COUNT",
-            data.last_check_deleted_count.map(|v| v.to_string())
-        );
+        write_field!("LAST_CHECK_DELETED_COUNT", data.last_check_deleted_count.map(|v| v.to_string()));
 
         // --- Node association ---
         write_field!("NODE_NAME", data.node_name);
@@ -251,12 +245,13 @@ impl InfoPodFsAdapter {
         write_vec!("CONTAINER_IDS", data.container_ids);
         write_vec!("IMAGE_IDS", data.image_ids);
 
-        let ports_str = data
-            .container_ports
-            .as_ref()
-            .map(|v| v.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(","))
-            .unwrap_or_default();
-        writeln!(f, "CONTAINER_PORTS:{}", ports_str)?;
+        // container_ports
+        if let Some(ports) = &data.container_ports {
+            let s = ports.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(",");
+            writeln!(f, "CONTAINER_PORTS:{}", s)?;
+        } else {
+            writeln!(f, "CONTAINER_PORTS:")?;
+        }
 
         write_field!("RESTART_POLICY", data.restart_policy);
         write_field!("SCHEDULER_NAME", data.scheduler_name);
@@ -268,24 +263,36 @@ impl InfoPodFsAdapter {
         write_vec!("PVC_NAMES", data.pvc_names);
         write_vec!("MOUNT_PATHS", data.mount_paths);
         write_field!(
-            "TERMINATION_GRACE_PERIOD_SECONDS",
-            data.termination_grace_period_seconds.map(|v| v.to_string())
-        );
+        "TERMINATION_GRACE_PERIOD_SECONDS",
+        data.termination_grace_period_seconds.map(|v| v.to_string())
+    );
         write_vec!("TOLERATIONS", data.tolerations);
 
         // --- Metadata ---
         write_field!("LABEL", data.label);
         write_field!("ANNOTATION", data.annotation);
 
-        write_field!("TEAM", data.team.clone());
-        write_field!("SERVICE", data.service.clone());
-        write_field!("ENV", data.env.clone());
+        write_field!("TEAM", data.team);
+        write_field!("SERVICE", data.service);
+        write_field!("ENV", data.env);
 
-        f.flush()?;
-        fs::rename(&tmp_path, &final_path).context("Failed to finalize pod info file")?;
+        // --- finalize atomic write (NO fsync) ------------------------
+
+        f.flush()?;  // write buffer → temp file (still OK if crash happens)
+
+        #[cfg(windows)]
+        if final_path.exists() {
+            fs::remove_file(&final_path)
+                .context("Failed to remove old pod info file before rename")?;
+        }
+
+        fs::rename(&tmp_path, &final_path)
+            .context("Failed to atomically replace pod info file")?;
 
         debug!("💾 Successfully wrote info.rci for '{}'", pod_uid);
         Ok(())
     }
+
+
 }
 
