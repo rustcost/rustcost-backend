@@ -22,6 +22,8 @@ use crate::domain::metric::k8s::common::dto::metric_k8s_raw_summary_dto::{
 };
 use crate::domain::metric::k8s::common::util::k8s_metric_determine_granularity::determine_granularity;
 use std::collections::HashMap;
+use tracing::error;
+use tracing::log::warn;
 
 pub const BYTES_PER_GB: f64 = 1_073_741_824.0;
 
@@ -43,13 +45,46 @@ pub fn resolve_time_window(q: &RangeQuery) -> TimeWindow {
         .map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc))
         .unwrap_or_else(Utc::now);
 
-    let granularity = determine_granularity(start, end);
+    let granularity = match q.granularity.clone() {
+        Some(g) => {
+            // Soft validation: log but never fail
+            if let Err(err) = validate_granularity(start, end, g.clone()) {
+                warn!("Invalid granularity override {:?}: {}", g, err);
+                // fallback to automatic granularity
+                determine_granularity(start, end)
+            } else {
+                g
+            }
+        }
+        None => determine_granularity(start, end),
+    };
 
-    TimeWindow {
-        start,
-        end,
-        granularity,
+    TimeWindow { start, end, granularity }
+}
+
+
+pub fn validate_granularity(
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    granularity: MetricGranularity,
+) -> Result<(), String> {
+    let diff = end - start;
+
+    match granularity {
+        MetricGranularity::Minute => {
+            if diff > chrono::Duration::hours(3) {
+                return Err("minute granularity cannot be used for ranges > 3 hours".into());
+            }
+        }
+        MetricGranularity::Hour => {
+            if diff > chrono::Duration::days(3) {
+                return Err("hour granularity cannot be used for ranges > 3 days".into());
+            }
+        }
+        MetricGranularity::Day => { /* always allowed */ }
     }
+
+    Ok(())
 }
 
 pub fn build_raw_summary_value(

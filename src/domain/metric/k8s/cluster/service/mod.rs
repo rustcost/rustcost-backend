@@ -16,21 +16,15 @@ use crate::domain::metric::k8s::common::dto::metric_k8s_cost_summary_dto::{Metri
 use crate::domain::metric::k8s::common::dto::metric_k8s_cost_trend_dto::{MetricCostTrendDto, MetricCostTrendResponseDto};
 use crate::domain::metric::k8s::common::dto::metric_k8s_raw_efficiency_dto::{MetricRawEfficiencyDto, MetricRawEfficiencyResponseDto};
 use crate::domain::metric::k8s::common::dto::metric_k8s_raw_summary_dto::{MetricRawSummaryDto, MetricRawSummaryResponseDto};
+use crate::domain::metric::k8s::common::service_helpers::resolve_time_window;
 
 pub async fn get_metric_k8s_cluster_raw(
     node_info_list: Vec<InfoNodeEntity>,
     q: RangeQuery,
 ) -> Result<Value, anyhow::Error> {
-    let start = q.start
-        .map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc))
-        .unwrap_or_else(|| Utc::now() - chrono::Duration::hours(1));
 
-    let end = q.end
-        .map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc))
-        .unwrap_or_else(Utc::now);
-
-    let granularity = determine_granularity(start, end);
-    let repo = resolve_k8s_metric_repository(&MetricScope::Node, &granularity);
+    let window = resolve_time_window(&q);
+    let repo = resolve_k8s_metric_repository(&MetricScope::Node, &window.granularity);
 
     let mut aggregated_points: Vec<UniversalMetricPointDto> = vec![];
 
@@ -41,9 +35,9 @@ pub async fn get_metric_k8s_cluster_raw(
         };
 
         let metrics = match &repo {
-            K8sMetricRepositoryVariant::NodeMinute(r) => r.get_row_between(&node_name, start, end),
-            K8sMetricRepositoryVariant::NodeHour(r) => r.get_row_between(&node_name, start, end),
-            K8sMetricRepositoryVariant::NodeDay(r) => r.get_row_between(&node_name, start, end),
+            K8sMetricRepositoryVariant::NodeMinute(r) => r.get_row_between(&node_name, window.start, window.end),
+            K8sMetricRepositoryVariant::NodeHour(r) => r.get_row_between(&node_name, window.start, window.end),
+            K8sMetricRepositoryVariant::NodeDay(r) => r.get_row_between(&node_name, window.start, window.end),
             _ => Ok(vec![]), // ✅ make sure all branches return the same type
         }
             .unwrap_or_else(|_| vec![]);
@@ -85,12 +79,13 @@ pub async fn get_metric_k8s_cluster_raw(
         points: aggregate_cluster_points(aggregated_points),
     };
 
+
     let response = MetricGetResponseDto {
-        start,
-        end,
+        start: window.start,
+        end: window.end,
         scope: "cluster".to_string(),
         target: None,
-        granularity,
+        granularity: window.granularity,
         series: vec![cluster_series],
     };
 

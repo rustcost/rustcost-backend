@@ -2,6 +2,7 @@
 
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
+use crate::domain::metric::k8s::common::dto::MetricGranularity;
 
 /// Common time range + pagination query parameters
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -13,5 +14,10 @@ pub struct RangeQuery {
     pub sort: Option<String>,
     pub metric: Option<String>,
     pub namespace: Option<String>,
+
+    /// Optional override: "minute", "hour", "day"
+    pub granularity: Option<MetricGranularity>,
+    
+
 }
 
